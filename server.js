@@ -159,7 +159,25 @@ app.delete('/api/produtos/:id', async (req, res) => {
     }
 });
 
-// --- ROTA NOVA: VER HISTÓRICO DE UM PRODUTO ---
+// --- HISTÓRICO GERAL (DASHBOARD/AUDITORIA) ---
+app.get('/api/movimentacoes', async (req, res) => {
+    try {
+        // Trazemos o nome do produto fazendo um JOIN
+        const query = `
+            SELECT m.*, p.nome as produto_nome, p.unidade 
+            FROM movimentacoes m 
+            JOIN produtos p ON m.produto_id = p.id 
+            ORDER BY m.data_movimentacao DESC 
+            LIMIT 50
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- HISTÓRICO INDIVIDUAL ---
 app.get('/api/movimentacoes/:id', async (req, res) => {
     try {
         const result = await pool.query(
