@@ -1,14 +1,14 @@
 :root {
-    /* Paleta de Cores "Barista Pro" (Quente e Profissional) */
+    /* Paleta de Cores "Barista Pro" */
     --bg-body: #FAFAF9;       /* Stone-50 */
     --bg-surface: #FFFFFF;    /* Branco */
-    --bg-sidebar: #1C1917;    /* Stone-900 (Quase preto) */
+    --bg-sidebar: #1C1917;    /* Stone-900 */
     
     --text-main: #292524;     /* Stone-800 */
     --text-muted: #78716C;    /* Stone-500 */
     --text-light: #F5F5F4;    /* Stone-100 */
 
-    --primary: #D97706;       /* Amber-600 (Laranja Queimado) */
+    --primary: #D97706;       /* Amber-600 */
     --primary-hover: #B45309; /* Amber-700 */
     
     --border: #E7E5E4;        /* Stone-200 */
@@ -137,7 +137,7 @@ body {
     position: relative; 
 }
 
-/* Transições de Tela */
+/* Transições */
 .screen { display: none; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 .screen.active { display: block; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -147,7 +147,7 @@ header { display: flex; justify-content: space-between; align-items: flex-end; m
 h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
 .subtitle { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
 
-/* --- CARDS E DASHBOARD --- */
+/* --- CARDS & DASHBOARD --- */
 .stats-grid { 
     display: grid; 
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
@@ -174,7 +174,7 @@ h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
 .stat-value { font-size: 1.8rem; font-weight: 700; }
 .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
 
-/* Card de Relatório */
+/* Card Relatório */
 .report-card { height: 100%; min-height: 300px; }
 .report-header { 
     display: flex; 
@@ -269,15 +269,16 @@ tr:hover td { background-color: #fafaf9; }
 
 .cart-item { 
     display: flex; 
-    align-items: center; 
-    gap: 12px; 
+    flex-direction: column;
+    gap: 8px; 
     margin-bottom: 16px; 
     padding-bottom: 16px; 
     border-bottom: 1px dashed var(--border); 
 }
+.cart-item-row { display: flex; justify-content: space-between; width: 100%; align-items: center; }
 .cart-item input { width: 70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; text-align: center; }
 
-/* --- BOTÕES DE MODO (ENTRADA/SAÍDA) --- */
+/* --- BOTÕES DE MODO --- */
 .mode-toggle { 
     display: flex; 
     background: #E7E5E4; 
@@ -360,6 +361,23 @@ tr:hover td { background-color: #fafaf9; }
     box-shadow: var(--shadow-md); 
 }
 
+/* Lista de Lotes no Modal */
+.lote-option {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.lote-option:hover { border-color: var(--primary); background: #FFF7ED; }
+.lote-option input { width: auto; margin-right: 12px; }
+.lote-info { flex: 1; }
+.lote-num { font-weight: 600; font-size: 0.9rem; }
+.lote-detalhe { font-size: 0.8rem; color: var(--text-muted); }
+
 /* --- TOAST --- */
 #toast-container { 
     position: fixed; 
@@ -386,12 +404,7 @@ tr:hover td { background-color: #fafaf9; }
 .toast-error { border-color: #991B1B; }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* UTILS DE TEXTO */
-.text-primary { color: var(--primary); }
-.text-danger { color: var(--danger-text); }
-.text-warning { color: var(--warning-text); }
-
-/* --- LAYOUT CADASTROS --- */
+/* --- CADASTROS --- */
 .grid-cadastros { 
     display: grid; 
     grid-template-columns: 1fr 1.5fr; 
@@ -414,7 +427,7 @@ tr:hover td { background-color: #fafaf9; }
 }
 .cat-item:last-child { border-bottom: none; }
 
-/* --- FORMS --- */
+/* --- FORMULÁRIOS --- */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px; color: var(--text-main); }

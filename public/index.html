@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barista Pro | Gestão</title>
+    <title>Barista Pro | Gestão por Lote</title>
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    
+    <!-- Fontes e Estilos -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Ícones -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-    <!-- LOGIN -->
+    <!-- TELA DE LOGIN -->
     <section id="login-screen" class="login-container">
         <div class="login-box">
             <div class="login-header">
                 <i data-lucide="coffee" size="48" class="text-primary"></i>
                 <h1>Barista Pro</h1>
-                <p>Entre para gerenciar o sistema</p>
+                <p>Gestão Inteligente de Estoque</p>
             </div>
             <form id="loginForm" onsubmit="fazerLogin(event)">
                 <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Ex: admin" required></div>
@@ -28,21 +34,25 @@
         </div>
     </section>
 
-    <!-- APP -->
+    <!-- APLICAÇÃO PRINCIPAL -->
     <div id="app-container" style="display: none;">
         
         <!-- SIDEBAR -->
         <nav class="sidebar">
             <div class="logo"><i data-lucide="coffee"></i> Barista Pro</div>
+            
             <div class="nav-label">Geral</div>
             <button class="menu-btn active" onclick="showScreen('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
             <button class="menu-btn" onclick="showScreen('estoque')"><i data-lucide="box"></i> Estoque</button>
             <button class="menu-btn" onclick="showScreen('cadastros')"><i data-lucide="package"></i> Cadastros</button>
+            
             <div class="nav-label">Operação</div>
             <button class="menu-btn" onclick="showScreen('movimentacao')"><i data-lucide="arrow-left-right"></i> Movimentação</button>
-            <div class="nav-label">Análise</div>
+            
+            <div class="nav-label">Auditoria</div>
             <button class="menu-btn" onclick="showScreen('relatorios')"><i data-lucide="bar-chart-2"></i> Relatórios</button>
             <button class="menu-btn" onclick="showScreen('historico')"><i data-lucide="history"></i> Histórico</button>
+
             <div style="flex: 1;"></div>
             <div class="user-info">
                 <div class="avatar"><i data-lucide="user"></i></div>
@@ -61,27 +71,27 @@
                     <div class="stat-card"><div class="stat-label">Itens Críticos</div><div class="stat-value" id="dashItensCriticos">0</div></div>
                     <div class="stat-card"><div class="stat-label">Vencendo (7 dias)</div><div class="stat-value" id="dashVencendo">0</div></div>
                 </div>
-                <h3 style="margin-bottom: 16px;">Atividades Recentes</h3>
+                <h3 style="margin-bottom: 16px;">Últimas Movimentações</h3>
                 <div class="table-container">
-                    <table><thead><tr><th>Data</th><th>Usuário</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead><tbody id="dashUltimasAtividades"></tbody></table>
+                    <table><thead><tr><th>Data</th><th>Produto</th><th>Ação</th><th>Lote/Obs</th><th>Qtd</th></tr></thead><tbody id="dashUltimasAtividades"></tbody></table>
                 </div>
             </section>
 
-            <!-- ESTOQUE -->
+            <!-- ESTOQUE (CONSULTA) -->
             <section id="estoque" class="screen">
-                <header><div><h1>Estoque</h1><div class="subtitle">Visão geral dos itens.</div></div></header>
+                <header><div><h1>Estoque</h1><div class="subtitle">Saldo total consolidade por produto.</div></div></header>
                 <div class="table-container">
                     <div class="toolbar">
                         <div class="search-wrapper" style="width: 300px;"><i data-lucide="search"></i><input type="text" id="buscaEstoque" class="search-input" placeholder="Buscar item..." onkeyup="filtrarTabelaEstoque(this.value)"></div>
                         <button class="btn btn-secondary" onclick="gerarListaApenasCriticos()"><i data-lucide="alert-triangle" size="16"></i> Faltas</button>
                     </div>
-                    <table><thead><tr><th>Produto</th><th>Categoria</th><th>Estoque Atual</th><th>Validade</th><th>Status</th></tr></thead><tbody id="tabelaEstoque"></tbody></table>
+                    <table><thead><tr><th>Produto</th><th>Categoria</th><th>Saldo Total</th><th>Próx. Validade</th><th>Status</th></tr></thead><tbody id="tabelaEstoque"></tbody></table>
                 </div>
             </section>
 
             <!-- CADASTROS -->
             <section id="cadastros" class="screen">
-                <header><div><h1>Cadastros</h1><div class="subtitle">Gerencie produtos e categorias.</div></div><button class="btn btn-primary" onclick="abrirModalCadastro()"><i data-lucide="plus"></i> Novo Item</button></header>
+                <header><div><h1>Cadastros</h1><div class="subtitle">Catálogo de produtos.</div></div><button class="btn btn-primary" onclick="abrirModalCadastro()"><i data-lucide="plus"></i> Novo Produto</button></header>
                 <div class="grid-cadastros">
                     <div class="stat-card" style="height: fit-content;">
                         <h3 style="margin-bottom: 15px;">Categorias</h3>
@@ -100,22 +110,31 @@
                 </div>
             </section>
 
-            <!-- MOVIMENTAÇÃO (PDV) -->
+            <!-- MOVIMENTAÇÃO (PDV COM LOTES) -->
             <section id="movimentacao" class="screen">
-                <header><div><h1>Movimentação</h1><div class="subtitle">Entrada e Saída de Estoque.</div></div></header>
+                <header><div><h1>Movimentação</h1><div class="subtitle">Entrada e Saída por Lote.</div></div></header>
                 <div class="mode-toggle">
                     <button class="mode-btn active-saida" id="btnModoSaida" onclick="setModo('SAIDA')">SAÍDA</button>
                     <button class="mode-btn" id="btnModoEntrada" onclick="setModo('ENTRADA')">ENTRADA</button>
                 </div>
+                
                 <div class="pos-layout">
+                    <!-- Lista de Produtos -->
                     <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <div class="search-wrapper"><i data-lucide="search"></i><input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item para adicionar..." onkeyup="renderizarTelaMovimento(this.value)"></div>
+                        <div class="search-wrapper"><i data-lucide="search"></i><input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item..." onkeyup="renderizarTelaMovimento(this.value)"></div>
                         <div id="listaProdutosMovimento" class="pos-products"></div>
                     </div>
+
+                    <!-- Carrinho -->
                     <div class="pos-cart">
                         <div class="cart-header"><h3 id="tituloCarrinho">Itens para Saída</h3></div>
                         <div class="cart-items" id="carrinhoLista"></div>
-                        <div class="cart-footer"><button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">Confirmar</button></div>
+                        <div class="cart-footer">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 600; color: var(--text-muted);">
+                                <span>Total Itens:</span><span id="totalItensCarrinho">0</span>
+                            </div>
+                            <button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">Confirmar</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -124,18 +143,21 @@
             <section id="relatorios" class="screen">
                 <header><h1>Relatórios</h1></header>
                 <div class="stats-grid-reports">
+                    <!-- Validade Corrigida com Lotes -->
                     <div class="stat-card report-card">
-                        <div class="report-header"><h3 class="text-danger"><i data-lucide="calendar-off" size="18"></i> Validade Próxima</h3></div>
+                        <div class="report-header"><h3 class="text-danger"><i data-lucide="calendar-off" size="18"></i> Vencimento por Lote</h3></div>
                         <div class="table-responsive">
-                            <table style="margin-top:10px; font-size:0.9rem"><thead><tr><th>Item</th><th>Vencimento</th><th>Status</th></tr></thead><tbody id="relVencimentos"></tbody></table>
+                            <table style="margin-top:10px; font-size:0.9rem"><thead><tr><th>Item</th><th>Lote</th><th>Vencto</th><th>Qtd</th></tr></thead><tbody id="relVencimentos"></tbody></table>
                         </div>
                     </div>
+                    <!-- Críticos -->
                     <div class="stat-card report-card">
-                        <div class="report-header"><h3 class="text-warning"><i data-lucide="alert-triangle" size="18"></i> Estoque Crítico</h3><button class="btn btn-ghost btn-sm" onclick="gerarListaApenasCriticos()"><i data-lucide="shopping-cart" size="16"></i> Lista</button></div>
+                        <div class="report-header"><h3 class="text-warning"><i data-lucide="alert-triangle" size="18"></i> Reposição (Estoque Baixo)</h3><button class="btn btn-ghost btn-sm" onclick="gerarListaApenasCriticos()"><i data-lucide="shopping-cart" size="16"></i> Lista</button></div>
                         <div class="table-responsive">
-                            <table style="margin-top:10px; font-size:0.9rem"><thead><tr><th>Item</th><th>Atual</th><th>Mínimo</th></tr></thead><tbody id="relCriticos"></tbody></table>
+                            <table style="margin-top:10px; font-size:0.9rem"><thead><tr><th>Item</th><th>Total</th><th>Mín</th></tr></thead><tbody id="relCriticos"></tbody></table>
                         </div>
                     </div>
+                    <!-- Mais Saídos -->
                     <div class="stat-card report-card">
                         <div class="report-header"><h3 class="text-primary"><i data-lucide="trending-up" size="18"></i> Top Saídas</h3></div>
                         <div class="table-responsive">
@@ -147,9 +169,9 @@
 
             <!-- HISTÓRICO -->
             <section id="historico" class="screen">
-                <header><h1>Histórico Completo</h1><div class="subtitle">Registro detalhado.</div></header>
+                <header><h1>Histórico</h1><div class="subtitle">Log de operações.</div></header>
                 <div class="table-container">
-                    <table><thead><tr><th>Data / Hora</th><th>Usuário</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead><tbody id="tabelaHistoricoCompleta"></tbody></table>
+                    <table><thead><tr><th>Data</th><th>Usuário</th><th>Produto</th><th>Ação</th><th>Qtd</th></tr></thead><tbody id="tabelaHistoricoCompleta"></tbody></table>
                 </div>
             </section>
         </main>
@@ -157,26 +179,69 @@
     
     <div id="toast-container"></div>
 
-    <!-- MODAL FORM -->
+    <!-- ================= MODAIS ================= -->
+
+    <!-- 1. MODAL DE SELEÇÃO DE LOTE (O NOVO CORAÇÃO DO SISTEMA) -->
+    <div id="modalLote" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="tituloModalLote" style="margin-bottom: 20px;">Selecionar Lote</h2>
+            <input type="hidden" id="idProdutoSelecionado">
+            
+            <!-- CONTEÚDO DINÂMICO (Muda se for Entrada ou Saída) -->
+            <div id="conteudoLoteEntrada" style="display:none;">
+                <div class="form-group">
+                    <label>Número do Lote / Identificação</label>
+                    <input type="text" id="inputNumeroLote" placeholder="Ex: Lote Dez/25 ou NF-123">
+                </div>
+                <div class="form-group">
+                    <label>Data de Validade</label>
+                    <input type="date" id="inputValidadeLote">
+                </div>
+            </div>
+
+            <div id="conteudoLoteSaida" style="display:none;">
+                <label style="margin-bottom:10px; display:block; font-weight:600;">Escolha o lote de origem:</label>
+                <div id="listaLotesDisponiveis" class="checklist-container" style="max-height: 200px;">
+                    <!-- Lista de lotes com saldo injetada via JS -->
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Quantidade</label>
+                <input type="number" id="inputQtdLote" step="0.01" placeholder="0.00" style="font-size: 1.2rem; font-weight: bold;">
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Cancelar</button>
+                <button class="btn btn-primary" style="flex:1" onclick="confirmarAdicaoCarrinho()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL DE CADASTRO PRODUTO -->
     <div id="modalForm" class="modal-overlay">
         <div class="modal-content">
-            <h2 id="modalTitle" style="margin-bottom: 24px;">Novo Item</h2>
+            <h2 id="modalTitle" style="margin-bottom: 24px;">Novo Produto</h2>
             <form id="formProduto">
                 <input type="hidden" id="id_produto">
                 <div class="form-row"><div class="form-group"><label>Nome</label><input id="nome" required></div><div class="form-group"><label>Categoria</label><select id="categoria"></select></div></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Qtd Atual</label><input type="number" id="quantidade" step="0.01" required></div>
                     <div class="form-group"><label>Unidade</label><select id="unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option></select></div>
+                    <div class="form-group"><label>Preço Custo (R$)</label><input type="number" id="preco" step="0.01"></div>
                 </div>
-                <div class="form-row"><div class="form-group"><label>Mínimo</label><input type="number" id="estoque_minimo" step="0.01" required></div><div class="form-group"><label>Custo (R$)</label><input type="number" id="preco" step="0.01"></div></div>
-                <div class="form-group"><label>Validade (Opcional)</label><input type="date" id="data_validade"></div>
-                <p id="avisoEdicao" style="font-size: 0.8rem; color: #78716C; margin-bottom: 15px; display: none;">* Para alterar o estoque, use a tela "Movimentação".</p>
-                <div style="display: flex; gap: 12px; margin-top: 24px;"><button type="button" class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Cancelar</button><button type="submit" class="btn btn-primary" style="flex:1">Salvar</button></div>
+                <div class="form-group"><label>Estoque Mínimo (Alerta)</label><input type="number" id="estoque_minimo" step="0.01" required></div>
+                
+                <!-- Nota: Estoque inicial é 0 na criação do cadastro agora -->
+                <p style="font-size: 0.85rem; color: var(--text-muted); background: #F5F5F4; padding: 10px; border-radius: 6px;">
+                    ℹ️ O estoque inicial será 0. Use a tela de <strong>Movimentação (Entrada)</strong> para cadastrar o primeiro lote.
+                </p>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;"><button type="button" class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Cancelar</button><button type="submit" class="btn btn-primary" style="flex:1">Salvar Cadastro</button></div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL LISTA -->
+    <!-- 3. MODAL LISTA DE COMPRAS -->
     <div id="modalResultado" class="modal-overlay">
         <div class="modal-content">
             <h2>Lista de Compras</h2>

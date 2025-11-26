@@ -16,142 +16,156 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- FUNÇÃO DE LOG ATUALIZADA ---
-async function registrarMovimentacao(produto_id, tipo, quantidade, usuario) {
+// --- LOGS ---
+async function registrarMovimentacao(produto_id, tipo, quantidade, usuario, obs = '') {
     try {
-        // Se não vier usuário, define como 'Sistema'
         const user = usuario || 'Sistema';
+        // Salva também qual lote foi afetado na observação se possível
         await pool.query(
             'INSERT INTO movimentacoes (produto_id, tipo, quantidade, usuario) VALUES ($1, $2, $3, $4)',
-            [produto_id, tipo, quantidade, user]
+            [produto_id, tipo + (obs ? ` (${obs})` : ''), quantidade, user]
         );
     } catch (err) { console.error("Erro log:", err.message); }
 }
 
-// --- ROTAS PRODUTOS ---
+// --- PRODUTOS (Leitura Dinâmica) ---
 app.get('/api/produtos', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM produtos ORDER BY nome ASC');
+        // Agora a quantidade total e a validade mais próxima vêm dos lotes
+        const query = `
+            SELECT p.*, 
+            COALESCE((SELECT SUM(quantidade) FROM lotes WHERE produto_id = p.id), 0) as quantidade_total,
+            (SELECT MIN(data_validade) FROM lotes WHERE produto_id = p.id AND quantidade > 0) as proxima_validade
+            FROM produtos p 
+            ORDER BY p.nome ASC
+        `;
+        const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/produtos', async (req, res) => {
-    // Agora recebe 'usuario' do corpo da requisição
-    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo, usuario } = req.body;
-    
-    if (quantidade < 0) return res.status(400).json({ error: "Qtd não pode ser negativa" });
-
+    const { nome, categoria, unidade, estoque_minimo, preco } = req.body;
+    // Nota: Ao criar produto, começa com estoque 0. A entrada é feita via Lote depois.
     try {
         const result = await pool.query(
-            'INSERT INTO produtos (nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [nome, categoria, quantidade, unidade, preco, data_validade || null, estoque_minimo || 0]
+            'INSERT INTO produtos (nome, categoria, quantidade, unidade, preco, estoque_minimo) VALUES ($1, $2, 0, $3, $4, $5) RETURNING *',
+            [nome, categoria, unidade, preco || 0, estoque_minimo || 5]
         );
-        
-        if(result.rows[0].quantidade > 0) {
-            await registrarMovimentacao(result.rows[0].id, 'ENTRADA', result.rows[0].quantidade, usuario);
-        }
         res.json(result.rows[0]);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/produtos/:id', async (req, res) => {
-    const { id } = req.params;
-    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo, usuario } = req.body;
+// --- GESTÃO DE LOTES (ENTRADA/SAÍDA) ---
 
-    try {
-        const old = await pool.query('SELECT quantidade FROM produtos WHERE id = $1', [id]);
-        if(old.rows.length === 0) return res.status(404).json({error: 'Não encontrado'});
-        
-        const diff = parseFloat(quantidade) - parseFloat(old.rows[0].quantidade);
-
-        await pool.query(
-            'UPDATE produtos SET nome=$1, categoria=$2, quantidade=$3, unidade=$4, preco=$5, data_validade=$6, estoque_minimo=$7 WHERE id=$8',
-            [nome, categoria, quantidade, unidade, preco, data_validade || null, estoque_minimo || 0, id]
-        );
-
-        if(diff !== 0) {
-            const tipo = diff > 0 ? 'ENTRADA (AJUSTE)' : 'SAIDA (AJUSTE)';
-            await registrarMovimentacao(id, tipo, Math.abs(diff), usuario);
-        }
-        res.json({ message: "Atualizado" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.patch('/api/produtos/:id/baixa', async (req, res) => {
-    const { id } = req.params;
-    const { quantidade_saida, usuario } = req.body;
-
+// 1. Listar Lotes de um Produto (Para o modal de seleção)
+app.get('/api/produtos/:id/lotes', async (req, res) => {
     try {
         const result = await pool.query(
-            'UPDATE produtos SET quantidade = quantidade - $1 WHERE id = $2 AND quantidade >= $1 RETURNING *',
-            [quantidade_saida, id]
+            'SELECT * FROM lotes WHERE produto_id = $1 AND quantidade > 0 ORDER BY data_validade ASC',
+            [req.params.id]
         );
-        if (result.rows.length === 0) return res.status(400).json({ error: "Estoque insuficiente ou item não existe" });
-        
-        await registrarMovimentacao(id, 'SAIDA', quantidade_saida, usuario);
-        res.json(result.rows[0]);
+        res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/produtos/:id', async (req, res) => {
+// 2. ENTRADA (Novo Lote ou Lote Existente)
+app.post('/api/movimentacao/entrada', async (req, res) => {
+    const { produto_id, quantidade, lote_id, novo_numero_lote, nova_validade, usuario } = req.body;
+
     try {
-        await pool.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
-        res.json({ message: "Deletado" });
+        if(lote_id) {
+            // Adicionar ao mesmo lote
+            await pool.query('UPDATE lotes SET quantidade = quantidade + $1 WHERE id = $2', [quantidade, lote_id]);
+            await registrarMovimentacao(produto_id, 'ENTRADA', quantidade, usuario, 'Lote Existente');
+        } else {
+            // Criar novo lote
+            await pool.query(
+                'INSERT INTO lotes (produto_id, numero, data_validade, quantidade) VALUES ($1, $2, $3, $4)',
+                [produto_id, novo_numero_lote, nova_validade || null, quantidade]
+            );
+            await registrarMovimentacao(produto_id, 'ENTRADA', quantidade, usuario, `Lote: ${novo_numero_lote}`);
+        }
+        
+        // Atualiza cache total na tabela produtos (opcional, mas bom para performance)
+        await pool.query('UPDATE produtos SET quantidade = (SELECT SUM(quantidade) FROM lotes WHERE produto_id = $1) WHERE id = $1', [produto_id]);
+        
+        res.json({ message: "Entrada realizada" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- ROTAS CATEGORIAS ---
+// 3. SAÍDA (Baixa em Lote Específico)
+app.post('/api/movimentacao/saida', async (req, res) => {
+    const { produto_id, lote_id, quantidade, usuario } = req.body;
+
+    try {
+        // Verifica saldo do lote
+        const check = await pool.query('SELECT quantidade, numero FROM lotes WHERE id = $1', [lote_id]);
+        if(check.rows.length === 0 || check.rows[0].quantidade < quantidade) {
+            return res.status(400).json({ error: "Saldo insuficiente neste lote" });
+        }
+
+        // Deduz do lote
+        await pool.query('UPDATE lotes SET quantidade = quantidade - $1 WHERE id = $2', [quantidade, lote_id]);
+        
+        // Log
+        await registrarMovimentacao(produto_id, 'SAIDA', quantidade, usuario, `Lote: ${check.rows[0].numero}`);
+
+        // Atualiza cache total
+        await pool.query('UPDATE produtos SET quantidade = (SELECT COALESCE(SUM(quantidade), 0) FROM lotes WHERE produto_id = $1) WHERE id = $1', [produto_id]);
+
+        res.json({ message: "Saída realizada" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- RELATÓRIOS CORRIGIDOS ---
+
+// Relatório Vencimento: AGORA SÓ TRAZ SE TIVER SALDO NO LOTE
+app.get('/api/relatorios/vencimento', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.nome, l.numero as lote, l.data_validade, l.quantidade, p.unidade
+            FROM lotes l
+            JOIN produtos p ON l.produto_id = p.id
+            WHERE l.quantidade > 0 AND l.data_validade IS NOT NULL
+            ORDER BY l.data_validade ASC
+            LIMIT 50
+        `);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Outros endpoints padrão
 app.get('/api/categorias', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM categorias ORDER BY nome ASC');
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    const r = await pool.query('SELECT * FROM categorias ORDER BY nome');
+    res.json(r.rows);
 });
-
 app.post('/api/categorias', async (req, res) => {
-    try {
-        const result = await pool.query('INSERT INTO categorias (nome) VALUES ($1) RETURNING *', [req.body.nome]);
-        res.json(result.rows[0]);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    await pool.query('INSERT INTO categorias (nome) VALUES ($1)', [req.body.nome]);
+    res.json({ok:true});
 });
-
 app.delete('/api/categorias/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM categorias WHERE id = $1', [req.params.id]);
-        res.json({ message: "Deletado" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    await pool.query('DELETE FROM categorias WHERE id=$1', [req.params.id]);
+    res.json({ok:true});
 });
-
-// --- ROTAS RELATÓRIOS/HISTÓRICO ---
 app.get('/api/movimentacoes', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT m.*, p.nome as produto_nome, p.unidade 
-            FROM movimentacoes m 
-            JOIN produtos p ON m.produto_id = p.id 
-            ORDER BY m.data_movimentacao DESC LIMIT 100
-        `);
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    const r = await pool.query(`SELECT m.*, p.nome as produto_nome FROM movimentacoes m JOIN produtos p ON m.produto_id = p.id ORDER BY m.data_movimentacao DESC LIMIT 50`);
+    res.json(r.rows);
 });
-
 app.get('/api/relatorios/mais-saidos', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT p.nome, p.unidade, SUM(m.quantidade) as total_saida
-            FROM movimentacoes m
-            JOIN produtos p ON m.produto_id = p.id
-            WHERE m.tipo = 'SAIDA'
-            GROUP BY p.id, p.nome, p.unidade
-            ORDER BY total_saida DESC
-            LIMIT 10
-        `);
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    const r = await pool.query(`SELECT p.nome, p.unidade, SUM(m.quantidade) as total_saida FROM movimentacoes m JOIN produtos p ON m.produto_id = p.id WHERE m.tipo LIKE 'SAIDA%' GROUP BY p.id, p.nome, p.unidade ORDER BY total_saida DESC LIMIT 10`);
+    res.json(r.rows);
+});
+app.delete('/api/produtos/:id', async (req, res) => {
+    await pool.query('DELETE FROM produtos WHERE id=$1', [req.params.id]);
+    res.json({ok:true});
+});
+app.put('/api/produtos/:id', async (req, res) => {
+    const { nome, categoria, unidade, estoque_minimo, preco } = req.body;
+    await pool.query('UPDATE produtos SET nome=$1, categoria=$2, unidade=$3, estoque_minimo=$4, preco=$5 WHERE id=$6', [nome, categoria, unidade, estoque_minimo, preco, req.params.id]);
+    res.json({ok:true});
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-app.listen(port, () => console.log(`Rodando na porta ${port}`));
+app.listen(port, () => console.log(`Server running port ${port}`));
 module.exports = app;
