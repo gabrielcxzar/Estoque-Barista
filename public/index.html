@@ -5,126 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barista Pro | Gestão</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <style>
-        :root {
-            --bg-body: #FAFAF9;
-            --bg-surface: #FFFFFF;
-            --bg-sidebar: #1C1917;
-            --text-main: #292524;
-            --text-muted: #78716C;
-            --text-light: #F5F5F4;
-            --primary: #D97706;
-            --primary-hover: #B45309; 
-            --border: #E7E5E4;
-            --radius-sm: 6px;
-            --radius-md: 12px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            
-            --success-bg: #DCFCE7; --success-text: #166534;
-            --danger-bg: #FEE2E2; --danger-text: #991B1B;
-            --warning-bg: #FEF3C7; --warning-text: #92400E;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: var(--bg-sidebar); display: flex; flex-direction: column; padding: 24px; border-right: 1px solid #333; }
-        .logo { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 48px; display: flex; align-items: center; gap: 12px; }
-        .logo i { color: var(--primary); }
-        .nav-label { text-transform: uppercase; font-size: 0.7rem; font-weight: 600; color: #57534E; margin-bottom: 12px; margin-top: 24px; }
-        .menu-btn { background: transparent; border: none; width: 100%; color: #A8A29E; padding: 12px 16px; text-align: left; font-size: 0.95rem; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s; display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-        .menu-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .menu-btn.active { background: rgba(217, 119, 6, 0.15); color: var(--primary); font-weight: 600; }
-
-        /* MAIN CONTENT */
-        .main-content { flex: 1; overflow-y: auto; padding: 40px; position: relative; }
-        .screen { display: none; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .screen.active { display: block; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
-        h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
-        .subtitle { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
-
-        /* CARDS & TABLES */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        .stat-card { background: var(--bg-surface); padding: 24px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-        .stat-value { font-size: 1.8rem; font-weight: 700; }
-        .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-
-        .table-container { background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border); overflow: hidden; }
-        .toolbar { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #FAFAF9; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 16px 24px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); }
-        td { padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 0.95rem; vertical-align: middle; }
-        
-        /* SAÍDA/ENTRADA SCREEN (POS Style) */
-        .pos-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; height: calc(100vh - 180px); }
-        .pos-products { overflow-y: auto; padding-right: 10px; }
-        .pos-cart { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; height: 100%; box-shadow: var(--shadow-md); }
-        .cart-header { padding: 20px; border-bottom: 1px solid var(--border); background: #fafaf9; border-radius: var(--radius-md) var(--radius-md) 0 0; }
-        .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
-        .cart-footer { padding: 20px; border-top: 1px solid var(--border); background: #fafaf9; border-radius: 0 0 var(--radius-md) var(--radius-md); }
-        
-        .product-card { background: #fff; border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
-        .product-card:hover { border-color: var(--primary); transform: translateX(2px); }
-        
-        .cart-item { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--border); }
-        .cart-item input { width: 70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; text-align: center; }
-
-        /* MODE TOGGLE */
-        .mode-toggle { display: flex; background: #E7E5E4; padding: 4px; border-radius: var(--radius-sm); margin-bottom: 20px; width: fit-content; }
-        .mode-btn { padding: 8px 24px; border: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem; cursor: pointer; color: #57534E; transition: 0.2s; }
-        .mode-btn.active-saida { background: #fff; color: #DC2626; box-shadow: var(--shadow-sm); }
-        .mode-btn.active-entrada { background: #fff; color: #166534; box-shadow: var(--shadow-sm); }
-
-        /* BUTTONS & INPUTS */
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; }
-        .btn-primary { background: var(--text-main); color: #fff; }
-        .btn-primary:hover { background: #000; }
-        .btn-secondary { background: #fff; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-secondary:hover { background: #F5F5F4; }
-        .btn-danger { background: var(--danger-bg); color: var(--danger-text); }
-        .btn-success { background: var(--success-bg); color: var(--success-text); }
-        .btn-ghost { background: transparent; color: var(--text-muted); padding: 8px; }
-        .btn-ghost:hover { background: #F5F5F4; color: var(--text-main); }
-        
-        .search-input { width: 100%; padding: 10px 12px 10px 36px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        .search-wrapper { position: relative; width: 100%; }
-        .search-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; }
-
-        /* BADGES */
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
-        .badge-success { background: var(--success-bg); color: var(--success-text); }
-        .badge-danger { background: var(--danger-bg); color: var(--danger-text); }
-        .badge-warning { background: var(--warning-bg); color: var(--warning-text); }
-
-        /* MODALS */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: #fff; width: 100%; max-width: 480px; border-radius: var(--radius-md); padding: 32px; box-shadow: var(--shadow-md); }
-        .choice-btn { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; text-align: left; margin-bottom: 12px; cursor: pointer; transition: 0.2s; }
-        .choice-btn:hover { border-color: var(--primary); background: #FFF7ED; }
-
-        /* TOAST */
-        #toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 200; }
-        .toast { background: #fff; padding: 16px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 12px; min-width: 300px; border-left: 4px solid var(--text-main); animation: slideInRight 0.3s; }
-        .toast-success { border-color: #166534; }
-        .toast-error { border-color: #991B1B; }
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        /* FORM STYLES */
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        input:disabled { background: #f5f5f4; cursor: not-allowed; color: #78716c; }
-        
-        .checklist-container { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin: 15px 0; }
-        .checklist-item { padding: 8px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
-    </style>
 </head>
 <body>
 
@@ -133,20 +15,14 @@
         <div class="logo"><i data-lucide="coffee"></i> Barista Pro</div>
         
         <div class="nav-label">Geral</div>
-        <button class="menu-btn active" onclick="showScreen('dashboard')">
-            <i data-lucide="layout-dashboard" size="18"></i> Dashboard
-        </button>
-        <button class="menu-btn" onclick="showScreen('estoque')">
-            <i data-lucide="package" size="18"></i> Estoque
-        </button>
+        <button class="menu-btn active" onclick="showScreen('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+        <button class="menu-btn" onclick="showScreen('cadastros')"><i data-lucide="package"></i> Cadastros</button>
         
         <div class="nav-label">Operação</div>
-        <button class="menu-btn" onclick="showScreen('movimentacao')">
-            <i data-lucide="arrow-left-right" size="18"></i> Registrar Movimento
-        </button>
-        <button class="menu-btn" onclick="showScreen('historico')">
-            <i data-lucide="history" size="18"></i> Histórico
-        </button>
+        <button class="menu-btn" onclick="showScreen('movimentacao')"><i data-lucide="arrow-left-right"></i> Movimentação</button>
+        
+        <div class="nav-label">Análise</div>
+        <button class="menu-btn" onclick="showScreen('relatorios')"><i data-lucide="bar-chart-2"></i> Relatórios</button>
     </nav>
 
     <!-- MAIN -->
@@ -155,138 +31,102 @@
         <!-- DASHBOARD -->
         <section id="dashboard" class="screen active">
             <header>
-                <div>
-                    <h1>Dashboard</h1>
-                    <div class="subtitle">Resumo do dia.</div>
-                </div>
+                <div><h1>Dashboard</h1><div class="subtitle">Resumo do dia.</div></div>
                 <div id="dataAtual" style="color: var(--text-muted); font-size: 0.9rem;"></div>
             </header>
-
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Valor em Estoque</div>
-                    <div class="stat-value" id="dashValorTotal">R$ 0,00</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Itens Críticos</div>
-                    <div class="stat-value" id="dashItensCriticos">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Vencendo (7 dias)</div>
-                    <div class="stat-value" id="dashVencendo">0</div>
-                </div>
+                <div class="stat-card"><div class="stat-label">Valor em Estoque</div><div class="stat-value" id="dashValorTotal">R$ 0,00</div></div>
+                <div class="stat-card"><div class="stat-label">Itens Críticos</div><div class="stat-value" id="dashItensCriticos">0</div></div>
+                <div class="stat-card"><div class="stat-label">Vencendo (7 dias)</div><div class="stat-value" id="dashVencendo">0</div></div>
             </div>
-
             <h3 style="margin-bottom: 16px;">Atividades Recentes</h3>
             <div class="table-container">
-                <table>
-                    <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead>
-                    <tbody id="dashUltimasAtividades"></tbody>
-                </table>
+                <table><thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead><tbody id="dashUltimasAtividades"></tbody></table>
             </div>
         </section>
 
-        <!-- ESTOQUE -->
-        <section id="estoque" class="screen">
+        <!-- CADASTROS (Produtos e Categorias) -->
+        <section id="cadastros" class="screen">
             <header>
-                <div>
-                    <h1>Inventário</h1>
-                    <div class="subtitle">Gerencie seus produtos.</div>
-                </div>
-                <button class="btn btn-primary" onclick="abrirModalCadastro()">
-                    <i data-lucide="plus" size="16"></i> Novo Item
-                </button>
+                <div><h1>Cadastros</h1><div class="subtitle">Gerencie produtos e categorias.</div></div>
+                <button class="btn btn-primary" onclick="abrirModalCadastro()"><i data-lucide="plus"></i> Novo Item</button>
             </header>
-
-            <div class="table-container">
-                <div class="toolbar">
-                    <div class="search-wrapper" style="width: 300px;">
-                        <i data-lucide="search"></i>
-                        <input type="text" id="buscaEstoque" class="search-input" placeholder="Buscar..." onkeyup="filtrarEstoque()">
+            <div class="grid-cadastros">
+                <!-- Coluna Esquerda: Categorias -->
+                <div class="stat-card" style="height: fit-content;">
+                    <h3 style="margin-bottom: 15px;">Categorias</h3>
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                        <input id="novaCategoria" placeholder="Nova Categoria..." style="flex:1">
+                        <button class="btn btn-secondary" onclick="adicionarCategoria()"><i data-lucide="plus"></i></button>
                     </div>
-                    <button class="btn btn-secondary" onclick="abrirOpcoesLista()">
-                        <i data-lucide="shopping-cart" size="16"></i> Lista de Compras
-                    </button>
+                    <ul id="listaCategorias" class="cat-list"></ul>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Produto</th>
-                            <th>Estoque</th>
-                            <th>Validade</th>
-                            <th>Custo</th>
-                            <th style="text-align: right;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaEstoque"></tbody>
-                </table>
+                <!-- Coluna Direita: Lista de Produtos -->
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Produto</th><th>Categoria</th><th style="text-align:right">Ações</th></tr></thead>
+                        <tbody id="tabelaCadastros"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
-        <!-- TELA NOVA: REGISTRAR MOVIMENTAÇÃO (PDV STYLE) -->
+        <!-- MOVIMENTAÇÃO (PDV) -->
         <section id="movimentacao" class="screen">
-            <header>
-                <div>
-                    <h1>Registrar Movimentação</h1>
-                    <div class="subtitle">Dê entrada ou saída em massa no estoque.</div>
-                </div>
-            </header>
-
+            <header><div><h1>Movimentação</h1><div class="subtitle">Entrada e Saída de Estoque.</div></div></header>
             <div class="mode-toggle">
                 <button class="mode-btn active-saida" id="btnModoSaida" onclick="setModo('SAIDA')">SAÍDA</button>
                 <button class="mode-btn" id="btnModoEntrada" onclick="setModo('ENTRADA')">ENTRADA</button>
             </div>
-
             <div class="pos-layout">
-                <!-- Esquerda: Lista de Produtos -->
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                     <div class="search-wrapper">
                         <i data-lucide="search"></i>
-                        <input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item para adicionar..." onkeyup="filtrarMovimento()">
+                        <input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item..." onkeyup="renderizarTelaMovimento(this.value)">
                     </div>
-                    <div id="listaProdutosMovimento" class="pos-products">
-                        <!-- Itens renderizados aqui -->
-                    </div>
+                    <div id="listaProdutosMovimento" class="pos-products"></div>
                 </div>
-
-                <!-- Direita: Carrinho -->
                 <div class="pos-cart">
-                    <div class="cart-header">
-                        <h3 id="tituloCarrinho">Itens para Saída</h3>
-                    </div>
-                    <div class="cart-items" id="carrinhoLista">
-                        <div style="text-align: center; color: var(--text-muted); margin-top: 40px;">
-                            Selecione itens ao lado
-                        </div>
-                    </div>
-                    <div class="cart-footer">
-                        <button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">
-                            Confirmar Saída
-                        </button>
-                    </div>
+                    <div class="cart-header"><h3 id="tituloCarrinho">Itens para Saída</h3></div>
+                    <div class="cart-items" id="carrinhoLista"></div>
+                    <div class="cart-footer"><button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">Confirmar</button></div>
                 </div>
             </div>
         </section>
 
-        <!-- HISTÓRICO -->
-        <section id="historico" class="screen">
-            <header>
-                <h1>Histórico de Movimentações</h1>
-            </header>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead>
-                    <tbody id="tabelaHistorico"></tbody>
-                </table>
+        <!-- RELATÓRIOS -->
+        <section id="relatorios" class="screen">
+            <header><h1>Relatórios</h1></header>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 style="color:var(--danger-text)">🚨 Vencidos / Perto</h3>
+                    <table style="margin-top:10px; font-size:0.9rem">
+                        <thead><tr><th>Item</th><th>Data</th><th>Qtd</th></tr></thead>
+                        <tbody id="relVencimentos"></tbody>
+                    </table>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color:var(--warning-text)">⚠️ Estoque Crítico</h3>
+                    <table style="margin-top:10px; font-size:0.9rem">
+                        <thead><tr><th>Item</th><th>Atual</th><th>Ref</th></tr></thead>
+                        <tbody id="relCriticos"></tbody>
+                    </table>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color:var(--text-main)">🔥 Mais Saídos (Top 10)</h3>
+                    <table style="margin-top:10px; font-size:0.9rem">
+                        <thead><tr><th>Item</th><th>Total Saída</th></tr></thead>
+                        <tbody id="relSaidos"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
     </main>
-
-    <!-- TOAST NOTIFICATIONS -->
+    
     <div id="toast-container"></div>
 
-    <!-- MODAL CADASTRO/EDIÇÃO -->
+    <!-- MODAL FORM -->
     <div id="modalForm" class="modal-overlay">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-bottom: 24px;">Novo Item</h2>
@@ -294,28 +134,20 @@
                 <input type="hidden" id="id_produto">
                 <div class="form-row">
                     <div class="form-group"><label>Nome</label><input id="nome" required></div>
-                    <div class="form-group"><label>Categoria</label><input id="categoria"></div>
+                    <div class="form-group"><label>Categoria</label><select id="categoria"></select></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Qtd Atual</label>
-                        <!-- ESTE CAMPO SERÁ DESABILITADO NA EDIÇÃO -->
-                        <input type="number" id="quantidade" step="0.01" required>
-                    </div>
+                    <div class="form-group"><label>Qtd Atual</label><input type="number" id="quantidade" step="0.01" required></div>
                     <div class="form-group"><label>Unidade</label>
-                        <select id="unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option></select>
+                        <select id="unidade"><option value="un">un</option><option value="kg">kg</option><option value="L">L</option><option value="ml">ml</option></select>
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Mínimo (Alerta)</label><input type="number" id="estoque_minimo" step="0.01" required></div>
+                    <div class="form-group"><label>Mínimo</label><input type="number" id="estoque_minimo" step="0.01" required></div>
                     <div class="form-group"><label>Custo (R$)</label><input type="number" id="preco" step="0.01"></div>
                 </div>
                 <div class="form-group"><label>Validade</label><input type="date" id="data_validade"></div>
-                
-                <p id="avisoEdicao" style="font-size: 0.8rem; color: #78716C; margin-bottom: 15px; display: none;">
-                    * Para alterar o estoque, use a tela "Registrar Movimento".
-                </p>
-
+                <p id="avisoEdicao" style="font-size: 0.8rem; color: #78716C; margin-bottom: 15px; display: none;">* Use a tela de Movimentação para alterar estoque.</p>
                 <div style="display: flex; gap: 12px; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Cancelar</button>
                     <button type="submit" class="btn btn-primary" style="flex:1">Salvar</button>
@@ -324,441 +156,6 @@
         </div>
     </div>
 
-    <!-- MODAL ESCOLHA LISTA -->
-    <div id="modalEscolha" class="modal-overlay">
-        <div class="modal-content">
-            <h2 style="margin-bottom: 20px;">Gerar Lista de Compras</h2>
-            <button class="choice-btn" onclick="gerarAutomatico()">
-                <strong style="color: var(--primary);">⚡ Automática</strong>
-                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">Apenas itens baixos ou vencendo.</div>
-            </button>
-            <button class="choice-btn" onclick="abrirSelecaoManual()">
-                <strong style="color: var(--primary);">📝 Manual</strong>
-                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">Escolha item por item da lista completa.</div>
-            </button>
-            <button class="btn btn-secondary" style="width: 100%;" onclick="fecharModais()">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- MODAL MANUAL CHECKLIST -->
-    <div id="modalManual" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Selecione os Itens</h2>
-            <div class="checklist-container" id="containerChecklist"></div>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Cancelar</button>
-                <button class="btn btn-primary" style="flex:1" onclick="gerarTextoManual()">Gerar Texto</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL TEXTO FINAL -->
-    <div id="modalResultado" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Copiar e Enviar</h2>
-            <textarea id="textoLista" style="width: 100%; height: 150px; margin: 15px 0; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: monospace;"></textarea>
-            <button class="btn btn-primary" style="width: 100%;" onclick="copiarLista()">Copiar Texto</button>
-        </div>
-    </div>
-
-    <script>
-        const API_URL = '/api/produtos';
-        let produtosCache = [];
-        let carrinhoMovimento = []; 
-        let editando = false;
-        let tipoMovimento = 'SAIDA'; // 'SAIDA' ou 'ENTRADA'
-
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            document.getElementById('dataAtual').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-            carregarEstoque();
-            atualizarDashboard();
-        });
-
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-            
-            const menuMap = {'dashboard':0, 'estoque':1, 'movimentacao':2, 'historico':3};
-            if(menuMap[screenId] !== undefined) document.querySelectorAll('.menu-btn')[menuMap[screenId]].classList.add('active');
-
-            if(screenId === 'historico') carregarHistorico();
-            if(screenId === 'dashboard') atualizarDashboard();
-            if(screenId === 'movimentacao') { carrinhoMovimento = []; renderizarTelaMovimento(); }
-        }
-
-        // --- CORE DATA ---
-        async function carregarEstoque() {
-            const res = await fetch(API_URL);
-            produtosCache = await res.json();
-            renderizarTabelaEstoque(produtosCache);
-        }
-
-        function renderizarTabelaEstoque(lista) {
-            const tbody = document.getElementById('tabelaEstoque');
-            tbody.innerHTML = '';
-            const hoje = new Date();
-
-            lista.forEach(p => {
-                let validadeHtml = '<span class="badge" style="background:#F5F5F4; color:#78716C">N/A</span>';
-                if(p.data_validade) {
-                    const val = new Date(p.data_validade);
-                    val.setDate(val.getDate() + 1);
-                    const diff = Math.ceil((val - hoje) / 86400000);
-                    if(diff < 0) validadeHtml = `<span class="badge badge-danger">Vencido</span>`;
-                    else if(diff < 10) validadeHtml = `<span class="badge badge-warning">${diff} dias</span>`;
-                    else validadeHtml = `<span class="badge badge-success">OK</span>`;
-                }
-
-                const baixo = parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo);
-                const qtdHtml = baixo 
-                    ? `<span style="color:#DC2626; font-weight:700">${p.quantidade}</span>` 
-                    : `<span>${p.quantidade}</span>`;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>
-                            <div style="font-weight:600">${p.nome}</div>
-                            <div style="font-size:0.8rem; color:var(--text-muted)">${p.categoria || ''}</div>
-                        </td>
-                        <td>${qtdHtml} <small>${p.unidade}</small></td>
-                        <td>${validadeHtml}</td>
-                        <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button>
-                            <button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-            lucide.createIcons();
-        }
-
-        // --- DASHBOARD & HISTÓRICO ---
-        async function atualizarDashboard() {
-            if(produtosCache.length === 0) await carregarEstoque();
-            let total = 0, criticos = 0, vencendo = 0;
-            const hoje = new Date();
-
-            produtosCache.forEach(p => {
-                total += (p.preco * p.quantidade);
-                if(p.quantidade <= p.estoque_minimo) criticos++;
-                if(p.data_validade) {
-                    const diff = (new Date(p.data_validade) - hoje) / 86400000;
-                    if(diff <= 7 && diff >= -1) vencendo++;
-                }
-            });
-
-            document.getElementById('dashValorTotal').innerText = total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-            document.getElementById('dashItensCriticos').innerText = criticos;
-            document.getElementById('dashVencendo').innerText = vencendo;
-
-            const res = await fetch('/api/movimentacoes');
-            const movs = await res.json();
-            const tbody = document.getElementById('dashUltimasAtividades');
-            tbody.innerHTML = movs.slice(0,5).map(m => `
-                <tr>
-                    <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleDateString()}</td>
-                    <td>${m.produto_nome}</td>
-                    <td>${formatarTipo(m.tipo)}</td>
-                    <td>${m.quantidade}</td>
-                </tr>`).join('');
-            lucide.createIcons();
-        }
-
-        async function carregarHistorico() {
-            const res = await fetch('/api/movimentacoes');
-            const lista = await res.json();
-            document.getElementById('tabelaHistorico').innerHTML = lista.map(m => `
-                <tr>
-                    <td>${new Date(m.data_movimentacao).toLocaleString()}</td>
-                    <td><strong>${m.produto_nome}</strong></td>
-                    <td>${formatarTipo(m.tipo)}</td>
-                    <td>${m.quantidade}</td>
-                </tr>`).join('');
-            lucide.createIcons();
-        }
-
-        function formatarTipo(t) {
-            if(t.includes('ENTRADA')) return '<span class="badge badge-success">Entrada</span>';
-            if(t.includes('SAIDA')) return '<span class="badge badge-danger">Saída</span>';
-            return `<span class="badge badge-warning">${t}</span>`;
-        }
-
-        // --- TELA DE MOVIMENTAÇÃO (SAIDA / ENTRADA) ---
-        function setModo(modo) {
-            tipoMovimento = modo;
-            
-            // Visual toggle
-            document.getElementById('btnModoSaida').className = modo === 'SAIDA' ? 'mode-btn active-saida' : 'mode-btn';
-            document.getElementById('btnModoEntrada').className = modo === 'ENTRADA' ? 'mode-btn active-entrada' : 'mode-btn';
-            
-            // Labels
-            document.getElementById('tituloCarrinho').innerText = modo === 'SAIDA' ? 'Itens para Saída' : 'Itens para Entrada';
-            document.getElementById('btnFinalizarMovimento').innerText = modo === 'SAIDA' ? 'Confirmar Saída' : 'Confirmar Entrada';
-            document.getElementById('btnFinalizarMovimento').className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success';
-
-            // Limpa carrinho ao trocar modo para evitar confusão
-            carrinhoMovimento = [];
-            renderizarCarrinho();
-        }
-
-        function renderizarTelaMovimento(filtro = '') {
-            const container = document.getElementById('listaProdutosMovimento');
-            container.innerHTML = '';
-            const filtrados = produtosCache.filter(p => p.nome.toLowerCase().includes(filtro.toLowerCase()));
-            
-            filtrados.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'product-card';
-                div.innerHTML = `
-                    <div>
-                        <div style="font-weight:600">${p.nome}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted)">Estoque: ${p.quantidade} ${p.unidade}</div>
-                    </div>
-                    <i data-lucide="plus-circle" style="color:var(--text-muted)"></i>
-                `;
-                div.onclick = () => adicionarAoCarrinho(p);
-                container.appendChild(div);
-            });
-            lucide.createIcons();
-            renderizarCarrinho();
-        }
-
-        function filtrarMovimento() {
-            const termo = document.getElementById('buscaMovimento').value;
-            renderizarTelaMovimento(termo);
-        }
-
-        function adicionarAoCarrinho(p) {
-            const existe = carrinhoMovimento.find(item => item.id === p.id);
-            if(existe) {
-                existe.movimento++;
-            } else {
-                carrinhoMovimento.push({ ...p, movimento: 1 });
-            }
-            renderizarCarrinho();
-        }
-
-        function renderizarCarrinho() {
-            const container = document.getElementById('carrinhoLista');
-            if(carrinhoMovimento.length === 0) {
-                container.innerHTML = `<div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Nenhum item selecionado</div>`;
-                return;
-            }
-            container.innerHTML = '';
-            carrinhoMovimento.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'cart-item';
-                div.innerHTML = `
-                    <div style="flex:1">
-                        <div style="font-weight:600; font-size:0.9rem">${item.nome}</div>
-                        <div style="font-size:0.75rem; color:#888">Atual: ${item.quantidade}</div>
-                    </div>
-                    <input type="number" value="${item.movimento}" min="0.1" step="0.1" onchange="atualizarQtdCarrinho(${index}, this.value)">
-                    <button class="btn btn-ghost" style="color:#DC2626; padding:4px;" onclick="removerDoCarrinho(${index})">
-                        <i data-lucide="x" size="16"></i>
-                    </button>
-                `;
-                container.appendChild(div);
-            });
-            lucide.createIcons();
-        }
-
-        function atualizarQtdCarrinho(index, qtd) {
-            carrinhoMovimento[index].movimento = parseFloat(qtd);
-        }
-
-        function removerDoCarrinho(index) {
-            carrinhoMovimento.splice(index, 1);
-            renderizarCarrinho();
-        }
-
-        async function finalizarMovimentacao() {
-            if(carrinhoMovimento.length === 0) return showToast('Vazio', 'Adicione itens primeiro', 'error');
-            
-            const verbo = tipoMovimento === 'SAIDA' ? 'baixa' : 'entrada';
-            if(!confirm(`Confirmar ${verbo} de ${carrinhoMovimento.length} itens?`)) return;
-
-            let erros = 0;
-
-            for (const item of carrinhoMovimento) {
-                try {
-                    let res;
-                    if (tipoMovimento === 'SAIDA') {
-                        // SAÍDA: Usa rota PATCH de baixa
-                        res = await fetch(`${API_URL}/${item.id}/baixa`, {
-                            method: 'PATCH',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ quantidade_saida: item.movimento })
-                        });
-                    } else {
-                        // ENTRADA: Calcula novo total e usa PUT (atualiza tudo)
-                        // A backend compara a diferença e registra "ENTRADA (AJUSTE)"
-                        const novaQtd = parseFloat(item.quantidade) + parseFloat(item.movimento);
-                        const dadosAtualizados = {
-                            nome: item.nome,
-                            categoria: item.categoria,
-                            quantidade: novaQtd,
-                            unidade: item.unidade,
-                            estoque_minimo: item.estoque_minimo,
-                            preco: item.preco,
-                            data_validade: item.data_validade
-                        };
-                        
-                        res = await fetch(`${API_URL}/${item.id}`, {
-                            method: 'PUT',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(dadosAtualizados)
-                        });
-                    }
-                    
-                    if(!res.ok) erros++;
-                } catch(e) { erros++; }
-            }
-
-            if(erros === 0) {
-                showToast('Sucesso', 'Movimentação concluída!');
-                carrinhoMovimento = [];
-                renderizarCarrinho();
-                carregarEstoque();
-            } else {
-                showToast('Atenção', `Alguns itens falharam.`, 'error');
-                carregarEstoque();
-            }
-        }
-
-        // --- LISTAS DE COMPRAS (MANUAL & AUTO) ---
-        function abrirOpcoesLista() { document.getElementById('modalEscolha').style.display = 'flex'; }
-        
-        function gerarAutomatico() {
-            const compras = produtosCache.filter(p => parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo));
-            mostrarResultadoLista(compras, "AUTOMÁTICA");
-        }
-
-        function abrirSelecaoManual() {
-            fecharModais();
-            const container = document.getElementById('containerChecklist');
-            container.innerHTML = '';
-            produtosCache.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
-                container.innerHTML += `
-                    <div class="checklist-item">
-                        <input type="checkbox" id="chk_${p.id}" value="${p.id}">
-                        <label for="chk_${p.id}" style="cursor:pointer; flex:1">
-                            <strong>${p.nome}</strong> <span style="color:#888; font-size:0.8rem">(${p.quantidade} ${p.unidade})</span>
-                        </label>
-                    </div>`;
-            });
-            document.getElementById('modalManual').style.display = 'flex';
-        }
-
-        function gerarTextoManual() {
-            const selecionados = [];
-            document.querySelectorAll('#containerChecklist input:checked').forEach(chk => {
-                const item = produtosCache.find(p => p.id == chk.value);
-                if(item) selecionados.push(item);
-            });
-            if(selecionados.length === 0) return alert('Selecione algo!');
-            mostrarResultadoLista(selecionados, "MANUAL");
-        }
-
-        function mostrarResultadoLista(lista, tipo) {
-            if(lista.length === 0) return alert('Lista vazia!');
-            fecharModais();
-            const texto = `*LISTA DE COMPRAS (${tipo})* ☕\n\n` + lista.map(p => `- [ ] ${p.nome} (Atual: ${p.quantidade} ${p.unidade})`).join('\n');
-            document.getElementById('textoLista').value = texto;
-            document.getElementById('modalResultado').style.display = 'flex';
-        }
-
-        function copiarLista() {
-            document.getElementById('textoLista').select();
-            document.execCommand('copy');
-            showToast('Copiado', 'Lista na área de transferência');
-            fecharModais();
-        }
-
-        // --- CRUD BÁSICO ---
-        function filtrarEstoque() {
-            const termo = document.getElementById('buscaEstoque').value.toLowerCase();
-            const filtrados = produtosCache.filter(p => p.nome.toLowerCase().includes(termo));
-            renderizarTabelaEstoque(filtrados);
-        }
-
-        function abrirModalCadastro() {
-            editando = false;
-            document.getElementById('formProduto').reset();
-            document.getElementById('modalTitle').innerText = "Novo Item";
-            
-            // Habilita quantidade para novos itens
-            const inputQtd = document.getElementById('quantidade');
-            inputQtd.disabled = false;
-            inputQtd.style.backgroundColor = "white";
-            document.getElementById('avisoEdicao').style.display = "none";
-            
-            document.getElementById('modalForm').style.display = 'flex';
-        }
-
-        function editarItem(p) {
-            editando = true;
-            document.getElementById('modalTitle').innerText = "Editar Item";
-            document.getElementById('id_produto').value = p.id;
-            document.getElementById('nome').value = p.nome;
-            document.getElementById('categoria').value = p.categoria;
-            document.getElementById('quantidade').value = p.quantidade;
-            document.getElementById('unidade').value = p.unidade;
-            document.getElementById('estoque_minimo').value = p.estoque_minimo;
-            document.getElementById('preco').value = p.preco;
-            if(p.data_validade) document.getElementById('data_validade').value = p.data_validade.split('T')[0];
-
-            // Bloqueia edição de estoque aqui
-            const inputQtd = document.getElementById('quantidade');
-            inputQtd.disabled = true;
-            inputQtd.style.backgroundColor = "#f5f5f4";
-            document.getElementById('avisoEdicao').style.display = "block";
-
-            document.getElementById('modalForm').style.display = 'flex';
-        }
-
-        document.getElementById('formProduto').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const dados = {
-                nome: document.getElementById('nome').value,
-                categoria: document.getElementById('categoria').value,
-                quantidade: parseFloat(document.getElementById('quantidade').value),
-                unidade: document.getElementById('unidade').value,
-                estoque_minimo: parseFloat(document.getElementById('estoque_minimo').value),
-                preco: parseFloat(document.getElementById('preco').value),
-                data_validade: document.getElementById('data_validade').value
-            };
-            const id = document.getElementById('id_produto').value;
-            const method = editando ? 'PUT' : 'POST';
-            const url = editando ? `${API_URL}/${id}` : API_URL;
-
-            await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
-            fecharModais();
-            carregarEstoque();
-            showToast('Sucesso', 'Produto salvo!');
-        });
-
-        async function deletarItem(id) {
-            if(confirm('Excluir item?')) {
-                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                carregarEstoque();
-                showToast('Deletado', 'Item removido');
-            }
-        }
-
-        function fecharModais() { document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none'); }
-        
-        function showToast(title, msg, type='success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerHTML = `<div style="flex:1"><strong>${title}</strong><br><small>${msg}</small></div>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
