@@ -14,15 +14,16 @@ const pool = new Pool({
 
 app.use(cors());
 app.use(express.json());
-// Serve a pasta public inteira (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- FUNÇÃO DE LOG ---
-async function registrarMovimentacao(produto_id, tipo, quantidade) {
+// --- FUNÇÃO DE LOG ATUALIZADA ---
+async function registrarMovimentacao(produto_id, tipo, quantidade, usuario) {
     try {
+        // Se não vier usuário, define como 'Sistema'
+        const user = usuario || 'Sistema';
         await pool.query(
-            'INSERT INTO movimentacoes (produto_id, tipo, quantidade) VALUES ($1, $2, $3)',
-            [produto_id, tipo, quantidade]
+            'INSERT INTO movimentacoes (produto_id, tipo, quantidade, usuario) VALUES ($1, $2, $3, $4)',
+            [produto_id, tipo, quantidade, user]
         );
     } catch (err) { console.error("Erro log:", err.message); }
 }
@@ -36,7 +37,9 @@ app.get('/api/produtos', async (req, res) => {
 });
 
 app.post('/api/produtos', async (req, res) => {
-    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo } = req.body;
+    // Agora recebe 'usuario' do corpo da requisição
+    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo, usuario } = req.body;
+    
     if (quantidade < 0) return res.status(400).json({ error: "Qtd não pode ser negativa" });
 
     try {
@@ -44,14 +47,17 @@ app.post('/api/produtos', async (req, res) => {
             'INSERT INTO produtos (nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [nome, categoria, quantidade, unidade, preco, data_validade || null, estoque_minimo || 0]
         );
-        if(result.rows[0].quantidade > 0) await registrarMovimentacao(result.rows[0].id, 'ENTRADA', result.rows[0].quantidade);
+        
+        if(result.rows[0].quantidade > 0) {
+            await registrarMovimentacao(result.rows[0].id, 'ENTRADA', result.rows[0].quantidade, usuario);
+        }
         res.json(result.rows[0]);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/produtos/:id', async (req, res) => {
     const { id } = req.params;
-    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo } = req.body;
+    const { nome, categoria, quantidade, unidade, preco, data_validade, estoque_minimo, usuario } = req.body;
 
     try {
         const old = await pool.query('SELECT quantidade FROM produtos WHERE id = $1', [id]);
@@ -64,14 +70,17 @@ app.put('/api/produtos/:id', async (req, res) => {
             [nome, categoria, quantidade, unidade, preco, data_validade || null, estoque_minimo || 0, id]
         );
 
-        if(diff !== 0) await registrarMovimentacao(id, diff > 0 ? 'ENTRADA (AJUSTE)' : 'SAIDA (AJUSTE)', Math.abs(diff));
+        if(diff !== 0) {
+            const tipo = diff > 0 ? 'ENTRADA (AJUSTE)' : 'SAIDA (AJUSTE)';
+            await registrarMovimentacao(id, tipo, Math.abs(diff), usuario);
+        }
         res.json({ message: "Atualizado" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.patch('/api/produtos/:id/baixa', async (req, res) => {
     const { id } = req.params;
-    const { quantidade_saida } = req.body;
+    const { quantidade_saida, usuario } = req.body;
 
     try {
         const result = await pool.query(
@@ -80,7 +89,7 @@ app.patch('/api/produtos/:id/baixa', async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(400).json({ error: "Estoque insuficiente ou item não existe" });
         
-        await registrarMovimentacao(id, 'SAIDA', quantidade_saida);
+        await registrarMovimentacao(id, 'SAIDA', quantidade_saida, usuario);
         res.json(result.rows[0]);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -129,7 +138,6 @@ app.get('/api/movimentacoes', async (req, res) => {
 
 app.get('/api/relatorios/mais-saidos', async (req, res) => {
     try {
-        // Pega os itens com mais saída (excluindo ajustes, focado em 'SAIDA')
         const result = await pool.query(`
             SELECT p.nome, p.unidade, SUM(m.quantidade) as total_saida
             FROM movimentacoes m
