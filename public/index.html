@@ -40,7 +40,7 @@
         </div>
     </section>
 
-    <!-- APLICAÇÃO PRINCIPAL (Inicialmente oculta) -->
+    <!-- APLICAÇÃO PRINCIPAL -->
     <div id="app-container" style="display: none;">
         
         <!-- SIDEBAR -->
@@ -50,6 +50,10 @@
             <div class="nav-label">Geral</div>
             <button class="menu-btn active" onclick="showScreen('dashboard')">
                 <i data-lucide="layout-dashboard"></i> Dashboard
+            </button>
+            <!-- MENU ESTOQUE -->
+            <button class="menu-btn" onclick="showScreen('estoque')">
+                <i data-lucide="box"></i> Estoque
             </button>
             <button class="menu-btn" onclick="showScreen('cadastros')">
                 <i data-lucide="package"></i> Cadastros
@@ -124,7 +128,41 @@
                 </div>
             </section>
 
-            <!-- TELA 2: CADASTROS (Produtos e Categorias) -->
+            <!-- TELA 2: ESTOQUE (CONSULTA) -->
+            <section id="estoque" class="screen">
+                <header>
+                    <div>
+                        <h1>Estoque</h1>
+                        <div class="subtitle">Visão geral dos itens em loja.</div>
+                    </div>
+                </header>
+
+                <div class="table-container">
+                    <div class="toolbar">
+                        <div class="search-wrapper" style="width: 300px;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="buscaEstoque" class="search-input" placeholder="Buscar item..." onkeyup="filtrarTabelaEstoque(this.value)">
+                        </div>
+                        <button class="btn btn-secondary" onclick="gerarListaApenasCriticos()">
+                            <i data-lucide="alert-triangle" size="16"></i> Faltas
+                        </button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Estoque Atual</th>
+                                <th>Validade</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaEstoque"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TELA 3: CADASTROS -->
             <section id="cadastros" class="screen">
                 <header>
                     <div>
@@ -137,7 +175,7 @@
                 </header>
 
                 <div class="grid-cadastros">
-                    <!-- Coluna Esquerda: Categorias -->
+                    <!-- Esquerda: Categorias -->
                     <div class="stat-card" style="height: fit-content;">
                         <h3 style="margin-bottom: 15px;">Categorias</h3>
                         <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -146,17 +184,15 @@
                                 <i data-lucide="plus"></i>
                             </button>
                         </div>
-                        <ul id="listaCategorias" class="cat-list">
-                            <!-- Lista via JS -->
-                        </ul>
+                        <ul id="listaCategorias" class="cat-list"></ul>
                     </div>
 
-                    <!-- Coluna Direita: Lista de Produtos -->
+                    <!-- Direita: Lista de Produtos -->
                     <div class="table-container">
                         <div class="toolbar">
                             <div class="search-wrapper" style="width: 100%;">
                                 <i data-lucide="search"></i>
-                                <input type="text" class="search-input" placeholder="Buscar produto..." onkeyup="filtrarTabelaCadastros(this.value)">
+                                <input type="text" class="search-input" placeholder="Buscar produto para editar..." onkeyup="filtrarTabelaCadastros(this.value)">
                             </div>
                         </div>
                         <table>
@@ -173,7 +209,7 @@
                 </div>
             </section>
 
-            <!-- TELA 3: MOVIMENTAÇÃO (PDV) -->
+            <!-- TELA 4: MOVIMENTAÇÃO (PDV) -->
             <section id="movimentacao" class="screen">
                 <header>
                     <div>
@@ -187,8 +223,13 @@
                     <button class="mode-btn" id="btnModoEntrada" onclick="setModo('ENTRADA')">ENTRADA</button>
                 </div>
 
+                <!-- Container para Data de Validade (Aparece só na Entrada via JS) -->
+                <div id="containerDataValidadeEntrada" style="margin-bottom: 20px; display: none;">
+                    <!-- JS injetará o input aqui -->
+                </div>
+
                 <div class="pos-layout">
-                    <!-- Lista de Produtos para Adicionar -->
+                    <!-- Lista de Produtos -->
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="search-wrapper">
                             <i data-lucide="search"></i>
@@ -216,7 +257,7 @@
                 </div>
             </section>
 
-            <!-- TELA 4: RELATÓRIOS -->
+            <!-- TELA 5: RELATÓRIOS -->
             <section id="relatorios" class="screen">
                 <header>
                     <h1>Relatórios</h1>
@@ -226,7 +267,7 @@
                     <!-- Card de Validade -->
                     <div class="stat-card report-card">
                         <div class="report-header">
-                            <h3 class="text-danger"><i data-lucide="calendar-off" size="18"></i> Controle de Validade</h3>
+                            <h3 class="text-danger"><i data-lucide="calendar-off" size="18"></i> Validade Próxima</h3>
                         </div>
                         <div class="table-responsive">
                             <table style="margin-top:10px; font-size:0.9rem">
@@ -246,8 +287,8 @@
                     <div class="stat-card report-card">
                         <div class="report-header">
                             <h3 class="text-warning"><i data-lucide="alert-triangle" size="18"></i> Estoque Crítico</h3>
-                            <button class="btn btn-ghost btn-sm" title="Gerar Lista de Compras" onclick="gerarListaApenasCriticos()">
-                                <i data-lucide="shopping-cart" size="16"></i> Gerar Lista
+                            <button class="btn btn-ghost btn-sm" title="Gerar Lista" onclick="gerarListaApenasCriticos()">
+                                <i data-lucide="shopping-cart" size="16"></i> Lista
                             </button>
                         </div>
                         <div class="table-responsive">
@@ -284,7 +325,7 @@
                 </div>
             </section>
 
-            <!-- TELA 5: HISTÓRICO -->
+            <!-- TELA 6: HISTÓRICO -->
             <section id="historico" class="screen">
                 <header>
                     <h1>Histórico Completo</h1>
@@ -309,7 +350,7 @@
         </main>
     </div>
     
-    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
     <!-- MODAL DE CADASTRO -->
@@ -374,7 +415,7 @@
         </div>
     </div>
 
-    <!-- MODAL LISTA DE COMPRAS (TEXTO FINAL) -->
+    <!-- MODAL LISTA DE COMPRAS -->
     <div id="modalResultado" class="modal-overlay">
         <div class="modal-content">
             <h2>Lista de Compras</h2>
