@@ -1,7 +1,7 @@
 {
   "name": "estoque-barista",
   "version": "1.0.0",
-  "main": "server.js", 
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
@@ -16,6 +16,6 @@
     "pg": "^8.11.5"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
