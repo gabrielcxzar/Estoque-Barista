@@ -2,15 +2,13 @@ const API_URL = '/api/produtos';
 let produtosCache = [];
 let categoriasCache = [];
 let carrinhoMovimento = [];
-let itemSendoAdicionado = null; // Armazena o produto temporário durante o modal
-let tipoMovimento = 'SAIDA'; // 'SAIDA' ou 'ENTRADA'
+let itemSendoAdicionado = null; // Produto focado no modal de lote
+let tipoMovimento = 'SAIDA';
 let usuarioAtual = null;
 
-const users = {
-    'admin': 'admin',
-    'barista': 'cafe'
-};
+const users = { 'admin': 'admin', 'barista': 'cafe' };
 
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     const dataEl = document.getElementById('dataAtual');
@@ -24,8 +22,7 @@ function fazerLogin(e) {
     e.preventDefault();
     const user = document.getElementById('loginUser').value.trim().toLowerCase();
     const pass = document.getElementById('loginPass').value.trim();
-    const errorMsg = document.getElementById('loginError');
-
+    
     if (users[user] && users[user] === pass) {
         usuarioAtual = user;
         document.getElementById('displayUser').innerText = user.charAt(0).toUpperCase() + user.slice(1);
@@ -33,9 +30,11 @@ function fazerLogin(e) {
         document.getElementById('app-container').style.display = 'flex';
         carregarDadosIniciais();
     } else {
-        errorMsg.innerText = 'Acesso negado';
-        document.getElementById('loginForm').classList.add('shake');
-        setTimeout(() => document.getElementById('loginForm').classList.remove('shake'), 500);
+        const err = document.getElementById('loginError');
+        err.innerText = 'Acesso negado';
+        const form = document.getElementById('loginForm');
+        form.classList.add('shake');
+        setTimeout(() => form.classList.remove('shake'), 500);
     }
 }
 
@@ -48,7 +47,7 @@ function fazerLogout() {
 }
 
 // ==========================================
-// 2. DADOS & NAVEGAÇÃO
+// 2. NAVEGAÇÃO
 // ==========================================
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -58,10 +57,9 @@ function showScreen(screenId) {
     if(screen) screen.classList.add('active');
 
     const menuMap = {'dashboard':0, 'estoque':1, 'cadastros':2, 'movimentacao':3, 'relatorios':4, 'historico':5};
-    if(menuMap[screenId] !== undefined) {
-        document.querySelectorAll('.menu-btn')[menuMap[screenId]].classList.add('active');
-    }
+    if(menuMap[screenId] !== undefined) document.querySelectorAll('.menu-btn')[menuMap[screenId]].classList.add('active');
 
+    // Carregamentos específicos por tela
     if(screenId === 'dashboard') atualizarDashboard();
     if(screenId === 'movimentacao') { 
         carrinhoMovimento = []; 
@@ -86,34 +84,40 @@ async function carregarEstoque() {
     try {
         const res = await fetch(API_URL);
         produtosCache = await res.json();
-    } catch (e) { showToast('Erro', 'Erro de conexão', 'error'); }
+    } catch (e) { showToast('Erro', 'Falha de conexão', 'error'); }
 }
 
 async function carregarCategorias() {
-    const res = await fetch('/api/categorias');
-    categoriasCache = await res.json();
-    atualizarSelectCategoria();
+    try {
+        const res = await fetch('/api/categorias');
+        categoriasCache = await res.json();
+        atualizarSelectCategoria();
+    } catch (e) { console.error(e); }
 }
 
 function atualizarSelectCategoria() {
     const select = document.getElementById('categoria');
     if(!select) return;
     select.innerHTML = '<option value="">Selecione...</option>';
-    categoriasCache.forEach(c => select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+    categoriasCache.forEach(c => {
+        select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+    });
 }
 
 // ==========================================
-// 3. MOVIMENTAÇÃO COM LOTES (NOVA LÓGICA)
+// 3. MOVIMENTAÇÃO (LÓGICA DE LOTES)
 // ==========================================
 function setModo(modo) {
     tipoMovimento = modo;
+    
+    // UI Update
     document.getElementById('btnModoSaida').className = modo === 'SAIDA' ? 'mode-btn active-saida' : 'mode-btn';
     document.getElementById('btnModoEntrada').className = modo === 'ENTRADA' ? 'mode-btn active-entrada' : 'mode-btn';
     document.getElementById('tituloCarrinho').innerText = modo === 'SAIDA' ? 'Saída (Por Lote)' : 'Entrada (Novo Lote)';
     const btn = document.getElementById('btnFinalizarMovimento');
     btn.innerText = modo === 'SAIDA' ? 'Confirmar Saída' : 'Confirmar Entrada';
-    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success';
-    
+    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success'; // Assumindo primary como laranja/verde via CSS ou mantendo padrão
+
     carrinhoMovimento = [];
     renderizarCarrinho();
 }
@@ -135,14 +139,14 @@ function renderizarTelaMovimento(filtro = '') {
             </div>
             <i data-lucide="plus-circle" style="color:var(--text-muted)"></i>
         `;
-        // AGORA ABRE MODAL DE LOTE
+        // Ao clicar, abre modal de seleção de lote
         div.onclick = () => abrirModalLote(p);
         container.appendChild(div);
     });
     lucide.createIcons();
 }
 
-// --- MODAL DE LOTES ---
+// --- MODAL LOTE ---
 async function abrirModalLote(produto) {
     itemSendoAdicionado = produto;
     document.getElementById('tituloModalLote').innerText = tipoMovimento === 'SAIDA' ? `Saída: ${produto.nome}` : `Entrada: ${produto.nome}`;
@@ -154,7 +158,7 @@ async function abrirModalLote(produto) {
     if (tipoMovimento === 'ENTRADA') {
         divEntrada.style.display = 'block';
         divSaida.style.display = 'none';
-        // Sugerir número de lote (Data atual)
+        // Sugestão de Lote
         const hoje = new Date();
         document.getElementById('inputNumeroLote').value = `Lote ${hoje.getDate()}/${hoje.getMonth()+1}`;
         document.getElementById('inputValidadeLote').value = '';
@@ -162,9 +166,9 @@ async function abrirModalLote(produto) {
         divEntrada.style.display = 'none';
         divSaida.style.display = 'block';
         
-        // Buscar lotes disponíveis deste produto
+        // Buscar lotes disponíveis (saldo > 0)
         const containerLotes = document.getElementById('listaLotesDisponiveis');
-        containerLotes.innerHTML = '<p style="color:#888">Carregando lotes...</p>';
+        containerLotes.innerHTML = '<p style="color:#888; padding:10px;">Carregando lotes...</p>';
         
         try {
             const res = await fetch(`/api/produtos/${produto.id}/lotes`);
@@ -172,7 +176,7 @@ async function abrirModalLote(produto) {
             
             containerLotes.innerHTML = '';
             if (lotes.length === 0) {
-                containerLotes.innerHTML = '<p style="color:red">Sem estoque disponível.</p>';
+                containerLotes.innerHTML = '<p style="color:var(--danger-text); padding:10px;">Sem estoque disponível para saída.</p>';
             } else {
                 lotes.forEach(l => {
                     const validade = l.data_validade ? new Date(l.data_validade).toLocaleDateString() : 'N/A';
@@ -213,7 +217,7 @@ function confirmarAdicaoCarrinho() {
         itemCarrinho.lote_validade = validade;
         itemCarrinho.tipo = 'ENTRADA';
     } else {
-        // SAÍDA
+        // SAÍDA - Validar seleção e saldo
         const radio = document.querySelector('input[name="loteSelecionado"]:checked');
         if (!radio) return showToast('Erro', 'Selecione um lote para retirar', 'error');
         
@@ -235,7 +239,7 @@ function renderizarCarrinho() {
     const totalEl = document.getElementById('totalItensCarrinho');
     if(!container) return;
 
-    totalEl.innerText = carrinhoMovimento.length;
+    if (totalEl) totalEl.innerText = carrinhoMovimento.length;
     container.innerHTML = '';
 
     if(carrinhoMovimento.length === 0) {
@@ -247,18 +251,18 @@ function renderizarCarrinho() {
         const div = document.createElement('div');
         div.className = 'cart-item';
         
-        let detalhesLote = item.tipo === 'ENTRADA' 
-            ? `Entrada: ${item.lote_numero}` 
+        let detalhes = item.tipo === 'ENTRADA' 
+            ? `Entrada: ${item.lote_numero} (Val: ${item.lote_validade ? new Date(item.lote_validade).toLocaleDateString() : '-'})` 
             : `Saída: ${item.lote_numero}`;
 
         div.innerHTML = `
-            <div class="cart-item-row">
+            <div class="cart-item-row" style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="flex:1">
                     <div style="font-weight:600; font-size:0.9rem">${item.nome}</div>
-                    <div style="font-size:0.75rem; color:var(--primary)">${detalhesLote}</div>
+                    <div style="font-size:0.75rem; color:var(--primary)">${detalhes}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:bold;">${item.movimento}</span>
+                    <span style="font-weight:bold; font-size:1.1rem;">${item.movimento}</span>
                     <button class="btn btn-ghost" style="color:#DC2626; padding:4px;" onclick="removerDoCarrinho(${index})">
                         <i data-lucide="x" size="16"></i>
                     </button>
@@ -288,10 +292,10 @@ async function finalizarMovimentacao() {
                 produto_id: item.id,
                 quantidade: item.movimento,
                 usuario: usuarioAtual,
-                // Campos específicos
-                lote_id: item.lote_id, // Apenas saída
-                novo_numero_lote: item.lote_numero, // Apenas entrada
-                nova_validade: item.lote_validade // Apenas entrada
+                // Dados específicos
+                lote_id: item.lote_id, // Saída
+                novo_numero_lote: item.lote_numero, // Entrada
+                nova_validade: item.lote_validade // Entrada
             };
 
             const res = await fetch(endpoint, {
@@ -309,6 +313,7 @@ async function finalizarMovimentacao() {
         carrinhoMovimento = [];
         renderizarCarrinho();
         carregarEstoque();
+        if(document.getElementById('dashboard').classList.contains('active')) atualizarDashboard();
     } else {
         showToast('Atenção', 'Alguns itens falharam.', 'error');
         carregarEstoque();
@@ -316,21 +321,21 @@ async function finalizarMovimentacao() {
 }
 
 // ==========================================
-// 4. RELATÓRIOS (AGORA COM LOTES)
+// 4. RELATÓRIOS (Baseado em Lotes)
 // ==========================================
 async function carregarRelatorios() {
     const hoje = new Date();
     
-    // 1. VENCIMENTO POR LOTE (API Filtrada)
+    // 1. VENCIMENTO (API retorna apenas lotes com saldo > 0)
     try {
         const res = await fetch('/api/relatorios/vencimento');
-        const lotesVencimento = await res.json();
+        const lotes = await res.json();
         const tbody = document.getElementById('relVencimentos');
         
-        if (lotesVencimento.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nenhum lote vencendo.</td></tr>';
+        if (lotes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Tudo em dia.</td></tr>';
         } else {
-            tbody.innerHTML = lotesVencimento.map(l => {
+            tbody.innerHTML = lotes.map(l => {
                 const val = new Date(l.data_validade);
                 val.setDate(val.getDate() + 1);
                 const diff = Math.ceil((val - hoje) / 86400000);
@@ -352,7 +357,7 @@ async function carregarRelatorios() {
         }
     } catch(e) {}
 
-    // 2. CRÍTICOS (Baseado no Total)
+    // 2. CRÍTICOS (Total vs Mínimo)
     const criticos = produtosCache.filter(p => parseFloat(p.quantidade_total) <= parseFloat(p.estoque_minimo));
     const tbodyCrit = document.getElementById('relCriticos');
     if(criticos.length === 0) {
@@ -371,33 +376,35 @@ async function carregarRelatorios() {
     try {
         const res = await fetch('/api/relatorios/mais-saidos');
         const saidos = await res.json();
-        document.getElementById('relSaidos').innerHTML = saidos.map(p => `
-            <tr><td>${p.nome}</td><td><strong>${p.total_saida}</strong> ${p.unidade}</td></tr>
-        `).join('');
+        document.getElementById('relSaidos').innerHTML = saidos.length === 0 
+            ? '<tr><td colspan="2" style="text-align:center;">Sem dados.</td></tr>' 
+            : saidos.map(p => `<tr><td>${p.nome}</td><td><strong>${p.total_saida}</strong> ${p.unidade}</td></tr>`).join('');
     } catch(e) {}
     
     lucide.createIcons();
 }
 
 // ==========================================
-// 5. CRUD BÁSICO (CADASTROS)
+// 5. CRUD CADASTROS
 // ==========================================
 function renderizarTelaCadastros() {
     const tbody = document.getElementById('tabelaCadastros');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    produtosCache.forEach(p => {
-        tbody.innerHTML += `
-            <tr>
-                <td><strong>${p.nome}</strong></td>
-                <td>${p.categoria || '-'}</td>
-                <td style="text-align:right">
-                    <button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button>
-                    <button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button>
-                </td>
-            </tr>
-        `;
-    });
+    if(tbody) {
+        tbody.innerHTML = '';
+        produtosCache.forEach(p => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${p.nome}</strong></td>
+                    <td>${p.categoria || '-'}</td>
+                    <td style="text-align:right">
+                        <button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button>
+                        <button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
     const listaCat = document.getElementById('listaCategorias');
     if(listaCat) {
         listaCat.innerHTML = '';
@@ -408,13 +415,15 @@ function renderizarTelaCadastros() {
     lucide.createIcons();
 }
 
-function filtrarTabelaCadastros(termo) {
-    const t = termo.toLowerCase();
+function filtrarTabelaCadastros(val) {
+    const t = val.toLowerCase();
     const tbody = document.getElementById('tabelaCadastros');
-    tbody.innerHTML = '';
-    produtosCache.filter(p => p.nome.toLowerCase().includes(t)).forEach(p => {
-        tbody.innerHTML += `<tr><td><strong>${p.nome}</strong></td><td>${p.categoria || '-'}</td><td style="text-align:right"><button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button><button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button></td></tr>`;
-    });
+    if(tbody) {
+        tbody.innerHTML = '';
+        produtosCache.filter(p => p.nome.toLowerCase().includes(t)).forEach(p => {
+            tbody.innerHTML += `<tr><td><strong>${p.nome}</strong></td><td>${p.categoria || '-'}</td><td style="text-align:right"><button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button><button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button></td></tr>`;
+        });
+    }
     lucide.createIcons();
 }
 
@@ -447,20 +456,21 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
         estoque_minimo: parseFloat(document.getElementById('estoque_minimo').value),
         preco: parseFloat(document.getElementById('preco').value)
     };
-    
     const id = document.getElementById('id_produto').value;
     const url = editando ? `${API_URL}/${id}` : API_URL;
     const method = editando ? 'PUT' : 'POST';
 
-    await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
-    fecharModais();
-    await carregarEstoque();
-    if(document.getElementById('cadastros').classList.contains('active')) renderizarTelaCadastros();
-    showToast('Sucesso', 'Salvo com sucesso!');
+    try {
+        await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
+        fecharModais(); 
+        await carregarEstoque();
+        if(document.getElementById('cadastros').classList.contains('active')) renderizarTelaCadastros();
+        showToast('Sucesso', 'Salvo!');
+    } catch (e) { showToast('Erro', 'Falha ao salvar', 'error'); }
 });
 
 async function deletarItem(id) {
-    if(confirm('Excluir produto e seus lotes?')) { 
+    if(confirm('Excluir produto e todo histórico?')) { 
         await fetch(`${API_URL}/${id}`, { method: 'DELETE' }); 
         carregarEstoque().then(() => { renderizarTelaCadastros(); showToast('Info', 'Removido'); });
     }
@@ -476,11 +486,16 @@ async function adicionarCategoria() {
 
 async function deletarCategoria(id) {
     if(!confirm('Excluir categoria?')) return;
-    await fetch(`/api/categorias/${id}`, { method: 'DELETE' });
-    await carregarCategorias(); renderizarTelaCadastros();
+    const res = await fetch(`/api/categorias/${id}`, { method: 'DELETE' });
+    if(!res.ok) {
+        const data = await res.json();
+        showToast('Erro', data.error || 'Não foi possível excluir', 'error');
+    } else {
+        await carregarCategorias(); renderizarTelaCadastros(); showToast('Info', 'Categoria removida');
+    }
 }
 
-// --- UTILS GERAIS ---
+// --- UTILS ---
 function renderizarTabelaEstoque(lista) {
     const tbody = document.getElementById('tabelaEstoque');
     if(!tbody) return;
@@ -488,46 +503,28 @@ function renderizarTabelaEstoque(lista) {
     const hoje = new Date();
 
     lista.forEach(p => {
-        // Status Baseado no Lote mais próximo
-        let validadeHtml = '<span class="badge badge-neutral">N/A</span>';
+        let valHtml = '<span class="badge badge-neutral">N/A</span>';
         if(p.proxima_validade) {
-            const val = new Date(p.proxima_validade);
-            val.setDate(val.getDate() + 1);
-            const diff = Math.ceil((val - hoje) / 86400000);
-            if(diff < 0) validadeHtml = `<span class="badge badge-danger">Lote Vencido</span>`;
-            else if(diff < 15) validadeHtml = `<span class="badge badge-warning">${diff} dias</span>`;
-            else validadeHtml = `<span class="badge badge-success">OK</span>`;
+            const diff = Math.ceil((new Date(p.proxima_validade) - hoje) / 86400000);
+            if(diff < 0) valHtml = `<span class="badge badge-danger">Lote Vencido</span>`;
+            else if(diff < 15) valHtml = `<span class="badge badge-warning">${diff} dias</span>`;
+            else valHtml = `<span class="badge badge-success">OK</span>`;
         }
-
         const baixo = parseFloat(p.quantidade_total) <= parseFloat(p.estoque_minimo);
-        const statusHtml = baixo 
-            ? `<span class="badge badge-danger">Crítico</span>` 
-            : `<span class="badge badge-success">Normal</span>`;
-
-        tbody.innerHTML += `
-            <tr>
-                <td><div style="font-weight:600">${p.nome}</div></td>
-                <td>${p.categoria || '-'}</td>
-                <td><strong style="${baixo ? 'color:var(--danger-text)' : ''}">${p.quantidade_total}</strong> <small>${p.unidade}</small></td>
-                <td>${validadeHtml}</td>
-                <td>${statusHtml}</td>
-            </tr>
-        `;
+        tbody.innerHTML += `<tr><td><div style="font-weight:600">${p.nome}</div></td><td>${p.categoria || '-'}</td><td><strong style="${baixo ? 'color:var(--danger-text)' : ''}">${p.quantidade_total}</strong> <small>${p.unidade}</small></td><td>${valHtml}</td><td>${baixo ? '<span class="badge badge-danger">Crítico</span>' : '<span class="badge badge-success">Normal</span>'}</td></tr>`;
     });
     lucide.createIcons();
 }
 
 function filtrarTabelaEstoque(val) {
     const t = val.toLowerCase();
-    const f = produtosCache.filter(p => p.nome.toLowerCase().includes(t));
-    renderizarTabelaEstoque(f);
+    renderizarTabelaEstoque(produtosCache.filter(p => p.nome.toLowerCase().includes(t)));
 }
 
 async function atualizarDashboard() {
     if(produtosCache.length === 0) await carregarEstoque();
     let total = 0, criticos = 0, vencendo = 0;
     const hoje = new Date();
-
     produtosCache.forEach(p => {
         total += (parseFloat(p.preco||0) * parseFloat(p.quantidade_total));
         if(parseFloat(p.quantidade_total) <= parseFloat(p.estoque_minimo)) criticos++;
@@ -536,52 +533,23 @@ async function atualizarDashboard() {
             if(diff <= 7) vencendo++;
         }
     });
-
     document.getElementById('dashValorTotal').innerText = total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
     document.getElementById('dashItensCriticos').innerText = criticos;
     document.getElementById('dashVencendo').innerText = vencendo;
-
+    
     try {
         const res = await fetch('/api/movimentacoes');
         const movs = await res.json();
-        const tbody = document.getElementById('dashUltimasAtividades');
-        if(tbody) {
-            tbody.innerHTML = movs.slice(0,5).map(m => `
-                <tr>
-                    <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleDateString()}</td>
-                    <td>${m.produto_nome}</td>
-                    <td>${formatarTipo(m.tipo)}</td>
-                    <td>${m.tipo.includes('Lote') ? m.tipo.split('(')[1].replace(')','') : '-'}</td>
-                    <td>${m.quantidade}</td>
-                </tr>`).join('');
-            lucide.createIcons();
-        }
-    } catch(e) {}
+        document.getElementById('dashUltimasAtividades').innerHTML = movs.slice(0,5).map(m => `<tr><td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleDateString()}</td><td>${m.produto_nome}</td><td>${m.tipo.includes('ENTRADA')?'Entrada':'Saída'}</td><td>${m.tipo.includes('Lote') ? m.tipo.split('(')[1].replace(')','') : '-'}</td><td>${m.quantidade}</td></tr>`).join('');
+    } catch(e){}
 }
 
 async function carregarHistoricoCompleto() {
     try {
         const res = await fetch('/api/movimentacoes');
         const lista = await res.json();
-        const tbody = document.getElementById('tabelaHistoricoCompleta');
-        if(tbody) {
-            tbody.innerHTML = lista.map(m => `
-                <tr>
-                    <td>${new Date(m.data_movimentacao).toLocaleString()}</td>
-                    <td>${m.usuario || 'Sistema'}</td>
-                    <td><strong>${m.produto_nome}</strong></td>
-                    <td>${formatarTipo(m.tipo)}</td>
-                    <td>${m.quantidade}</td>
-                </tr>`).join('');
-            lucide.createIcons();
-        }
-    } catch(e) {}
-}
-
-function formatarTipo(t) {
-    if(t.includes('ENTRADA')) return '<span class="badge badge-success">Entrada</span>';
-    if(t.includes('SAIDA')) return '<span class="badge badge-danger">Saída</span>';
-    return `<span class="badge badge-warning">${t}</span>`;
+        document.getElementById('tabelaHistoricoCompleta').innerHTML = lista.map(m => `<tr><td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleString()}</td><td>${m.usuario}</td><td><strong>${m.produto_nome}</strong></td><td>${m.tipo}</td><td>${m.quantidade}</td></tr>`).join('');
+    } catch(e){}
 }
 
 function gerarListaApenasCriticos() {
