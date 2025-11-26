@@ -6,25 +6,18 @@ let editando = false;
 let tipoMovimento = 'SAIDA';
 let usuarioAtual = null;
 
-// --- CONFIGURAÇÃO DE USUÁRIOS ---
 const users = {
     'admin': 'admin',
     'barista': 'cafe'
 };
 
-// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     const dataEl = document.getElementById('dataAtual');
     if (dataEl) dataEl.innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-    
-    // Se quiser persistir o login, pode checar localStorage aqui.
-    // Por segurança, mantive pedindo login no refresh.
 });
 
-// ==========================================
-// 1. SISTEMA DE LOGIN
-// ==========================================
+// --- LOGIN ---
 function fazerLogin(e) {
     e.preventDefault();
     const user = document.getElementById('loginUser').value.trim().toLowerCase();
@@ -34,15 +27,11 @@ function fazerLogin(e) {
     if (users[user] && users[user] === pass) {
         usuarioAtual = user;
         document.getElementById('displayUser').innerText = user.charAt(0).toUpperCase() + user.slice(1);
-        
-        // Troca de tela
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
-        
-        // Carrega dados iniciais
         carregarDadosIniciais();
     } else {
-        errorMsg.innerText = 'Usuário ou senha incorretos';
+        errorMsg.innerText = 'Credenciais inválidas';
         const form = document.getElementById('loginForm');
         form.classList.add('shake');
         setTimeout(() => form.classList.remove('shake'), 500);
@@ -50,7 +39,7 @@ function fazerLogin(e) {
 }
 
 function fazerLogout() {
-    if(!confirm("Sair do sistema?")) return;
+    if(!confirm("Deseja sair do sistema?")) return;
     usuarioAtual = null;
     document.getElementById('app-container').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
@@ -58,26 +47,20 @@ function fazerLogout() {
     document.getElementById('loginError').innerText = '';
 }
 
-// ==========================================
-// 2. NAVEGAÇÃO E DADOS
-// ==========================================
+// --- NAVEGAÇÃO ---
 function showScreen(screenId) {
-    // Remove classe active de tudo
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
     
-    // Ativa tela atual
     const screen = document.getElementById(screenId);
     if(screen) screen.classList.add('active');
 
-    // Ativa menu correspondente
     const menuMap = {'dashboard':0, 'estoque':1, 'cadastros':2, 'movimentacao':3, 'relatorios':4, 'historico':5};
     if(menuMap[screenId] !== undefined) {
         const btns = document.querySelectorAll('.menu-btn');
         if(btns[menuMap[screenId]]) btns[menuMap[screenId]].classList.add('active');
     }
 
-    // Hooks de carregamento específico
     if(screenId === 'dashboard') atualizarDashboard();
     if(screenId === 'movimentacao') { 
         carrinhoMovimento = []; 
@@ -102,7 +85,7 @@ async function carregarEstoque() {
     try {
         const res = await fetch(API_URL);
         produtosCache = await res.json();
-    } catch (e) { showToast('Erro', 'Falha ao conectar no servidor', 'error'); }
+    } catch (e) { showToast('Erro', 'Falha de conexão', 'error'); }
 }
 
 async function carregarCategorias() {
@@ -113,9 +96,16 @@ async function carregarCategorias() {
     } catch (e) { console.error(e); }
 }
 
-// ==========================================
-// 3. TELA: ESTOQUE (CONSULTA)
-// ==========================================
+function atualizarSelectCategoria() {
+    const select = document.getElementById('categoria');
+    if(!select) return;
+    select.innerHTML = '<option value="">Selecione...</option>';
+    categoriasCache.forEach(c => {
+        select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+    });
+}
+
+// --- TELA: ESTOQUE ---
 function renderizarTabelaEstoque(lista) {
     const tbody = document.getElementById('tabelaEstoque');
     if(!tbody) return;
@@ -123,29 +113,25 @@ function renderizarTabelaEstoque(lista) {
     const hoje = new Date();
 
     if(lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Nenhum item encontrado</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Nenhum registro encontrado</td></tr>';
         return;
     }
 
     lista.forEach(p => {
-        // Status Validade
         let validadeHtml = '<span class="badge badge-neutral">N/A</span>';
-        if(p.data_validade) {
+        // CORREÇÃO: Só valida data se tiver estoque positivo
+        if(p.data_validade && parseFloat(p.quantidade) > 0) {
             const val = new Date(p.data_validade);
-            val.setDate(val.getDate() + 1); // Ajuste fuso
+            val.setDate(val.getDate() + 1);
             const diff = Math.ceil((val - hoje) / 86400000);
             
-            // Só mostra alerta de validade se tiver estoque (pedido do usuário)
-            if (parseFloat(p.quantidade) > 0) {
-                if(diff < 0) validadeHtml = `<span class="badge badge-danger">Vencido</span>`;
-                else if(diff < 15) validadeHtml = `<span class="badge badge-warning">${diff} dias</span>`;
-                else validadeHtml = `<span class="badge badge-success">OK</span>`;
-            } else {
-                validadeHtml = `<span class="badge badge-neutral">Sem estoque</span>`;
-            }
+            if(diff < 0) validadeHtml = `<span class="badge badge-danger">Vencido</span>`;
+            else if(diff < 15) validadeHtml = `<span class="badge badge-warning">${diff} dias</span>`;
+            else validadeHtml = `<span class="badge badge-success">OK</span>`;
+        } else if (parseFloat(p.quantidade) <= 0) {
+             validadeHtml = `<span class="badge badge-neutral">-</span>`;
         }
 
-        // Status Quantidade
         const baixo = parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo);
         const statusHtml = baixo 
             ? `<span class="badge badge-danger">Crítico</span>` 
@@ -153,9 +139,7 @@ function renderizarTabelaEstoque(lista) {
 
         tbody.innerHTML += `
             <tr>
-                <td>
-                    <div style="font-weight:600">${p.nome}</div>
-                </td>
+                <td><div style="font-weight:600">${p.nome}</div></td>
                 <td>${p.categoria || '-'}</td>
                 <td><strong style="${baixo ? 'color:var(--danger-text)' : ''}">${p.quantidade}</strong> <small style="color:#777">${p.unidade}</small></td>
                 <td>${validadeHtml}</td>
@@ -172,9 +156,7 @@ function filtrarTabelaEstoque(termo) {
     renderizarTabelaEstoque(filtrados);
 }
 
-// ==========================================
-// 4. TELA: CADASTROS
-// ==========================================
+// --- TELA: CADASTROS ---
 function renderizarTelaCadastros() {
     const tbody = document.getElementById('tabelaCadastros');
     if(tbody) {
@@ -182,10 +164,7 @@ function renderizarTelaCadastros() {
         produtosCache.forEach(p => {
             tbody.innerHTML += `
                 <tr>
-                    <td>
-                        <strong>${p.nome}</strong>
-                        <div style="font-size:0.8rem; color:#888">${p.quantidade} ${p.unidade}</div>
-                    </td>
+                    <td><strong>${p.nome}</strong><div style="font-size:0.8rem; color:#888">${p.quantidade} ${p.unidade}</div></td>
                     <td>${p.categoria || '-'}</td>
                     <td style="text-align:right">
                         <button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})' title="Editar"><i data-lucide="edit-2" size="16"></i></button>
@@ -199,13 +178,12 @@ function renderizarTelaCadastros() {
     const listaCat = document.getElementById('listaCategorias');
     if(listaCat) {
         listaCat.innerHTML = '';
+        if(categoriasCache.length === 0) listaCat.innerHTML = '<li style="padding:10px; color:#888; text-align:center">Nenhuma categoria</li>';
         categoriasCache.forEach(c => {
             listaCat.innerHTML += `
                 <li class="cat-item">
                     <span>${c.nome}</span>
-                    <button class="btn btn-ghost" style="color:#DC2626; padding:4px" onclick="deletarCategoria(${c.id})">
-                        <i data-lucide="trash-2" size="14"></i>
-                    </button>
+                    <button class="btn btn-ghost" style="color:#DC2626; padding:4px" onclick="deletarCategoria(${c.id})"><i data-lucide="trash-2" size="14"></i></button>
                 </li>
             `;
         });
@@ -216,44 +194,38 @@ function renderizarTelaCadastros() {
 function filtrarTabelaCadastros(termo) {
     const t = termo.toLowerCase();
     const tbody = document.getElementById('tabelaCadastros');
+    if(!tbody) return;
     tbody.innerHTML = '';
-    produtosCache.filter(p => p.nome.toLowerCase().includes(t))
-        .forEach(p => {
-            tbody.innerHTML += `<tr><td><strong>${p.nome}</strong><br><small>${p.quantidade}</small></td><td>${p.categoria || '-'}</td><td style="text-align:right"><button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button><button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button></td></tr>`;
-        });
+    produtosCache.filter(p => p.nome.toLowerCase().includes(t)).forEach(p => {
+        tbody.innerHTML += `<tr><td><strong>${p.nome}</strong><br><small>${p.quantidade}</small></td><td>${p.categoria || '-'}</td><td style="text-align:right"><button class="btn btn-ghost" onclick='editarItem(${JSON.stringify(p)})'><i data-lucide="edit-2" size="16"></i></button><button class="btn btn-ghost" style="color:#DC2626" onclick="deletarItem(${p.id})"><i data-lucide="trash-2" size="16"></i></button></td></tr>`;
+    });
     lucide.createIcons();
 }
 
 async function adicionarCategoria() {
     const input = document.getElementById('novaCategoria');
     const nome = input.value.trim();
-    if(!nome) return showToast('Erro', 'Digite um nome', 'error');
+    if(!nome) return showToast('Atenção', 'Informe o nome da categoria', 'error');
 
     await fetch('/api/categorias', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nome }) });
-    input.value = ''; await carregarCategorias(); renderizarTelaCadastros(); showToast('Sucesso', 'Categoria adicionada');
+    input.value = ''; await carregarCategorias(); renderizarTelaCadastros(); showToast('Sucesso', 'Categoria salva');
 }
 
 async function deletarCategoria(id) {
-    if(!confirm('Tem certeza? Isso pode afetar produtos vinculados.')) return;
+    if(!confirm('Confirmar exclusão?')) return;
     await fetch(`/api/categorias/${id}`, { method: 'DELETE' });
     await carregarCategorias(); renderizarTelaCadastros(); showToast('Info', 'Categoria removida');
 }
 
-// ==========================================
-// 5. TELA: MOVIMENTAÇÃO (PDV)
-// ==========================================
+// --- TELA: MOVIMENTAÇÃO (PDV) ---
 function setModo(modo) {
     tipoMovimento = modo;
-    
-    // Atualiza UI dos botões
     document.getElementById('btnModoSaida').className = modo === 'SAIDA' ? 'mode-btn active-saida' : 'mode-btn';
     document.getElementById('btnModoEntrada').className = modo === 'ENTRADA' ? 'mode-btn active-entrada' : 'mode-btn';
-    
-    // Atualiza Textos
     document.getElementById('tituloCarrinho').innerText = modo === 'SAIDA' ? 'Itens para Saída' : 'Itens para Entrada';
     const btn = document.getElementById('btnFinalizarMovimento');
     btn.innerText = modo === 'SAIDA' ? 'Confirmar Saída' : 'Confirmar Entrada';
-    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success'; // Você pode criar uma classe .btn-success no CSS ou usar primary
+    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success'; // Nota: btn-success deve existir no CSS ou usar primary
 
     carrinhoMovimento = [];
     renderizarCarrinho();
@@ -287,12 +259,10 @@ function adicionarAoCarrinho(p) {
     if(existe) {
         existe.movimento++;
     } else {
-        // Se for entrada, já tentamos puxar a validade atual como sugestão
-        let validadeAtual = '';
-        if (p.data_validade) {
-            validadeAtual = p.data_validade.split('T')[0];
-        }
-        carrinhoMovimento.push({ ...p, movimento: 1, novaValidade: validadeAtual });
+        // Se for entrada, sugere a data atual como validade (ou vazia para forçar preenchimento)
+        // Aqui deixamos vazio ou a validade antiga se existir
+        let validadeSugerida = p.data_validade ? p.data_validade.split('T')[0] : '';
+        carrinhoMovimento.push({ ...p, movimento: 1, novaValidade: validadeSugerida });
     }
     renderizarCarrinho();
 }
@@ -310,10 +280,9 @@ function renderizarCarrinho() {
     carrinhoMovimento.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'cart-item';
-        div.style.flexDirection = 'column'; // Para acomodar a data embaixo se necessário
+        div.style.flexDirection = 'column';
         div.style.alignItems = 'stretch';
 
-        // HTML base da linha
         let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                 <div style="flex:1">
@@ -329,7 +298,7 @@ function renderizarCarrinho() {
             </div>
         `;
 
-        // Se for ENTRADA, adiciona campo de DATA DE VALIDADE para este item
+        // DATA DE VALIDADE POR ITEM (SÓ NA ENTRADA)
         if (tipoMovimento === 'ENTRADA') {
             html += `
                 <div style="margin-top:8px; border-top:1px dashed #eee; padding-top:4px;">
@@ -345,40 +314,28 @@ function renderizarCarrinho() {
     lucide.createIcons();
 }
 
-function atualizarQtdCarrinho(index, qtd) {
-    carrinhoMovimento[index].movimento = parseFloat(qtd);
-}
-
-function atualizarValidadeCarrinho(index, data) {
-    carrinhoMovimento[index].novaValidade = data;
-}
-
-function removerDoCarrinho(index) {
-    carrinhoMovimento.splice(index, 1);
-    renderizarCarrinho();
-}
+function atualizarQtdCarrinho(index, qtd) { carrinhoMovimento[index].movimento = parseFloat(qtd); }
+function atualizarValidadeCarrinho(index, data) { carrinhoMovimento[index].novaValidade = data; }
+function removerDoCarrinho(index) { carrinhoMovimento.splice(index, 1); renderizarCarrinho(); }
 
 async function finalizarMovimentacao() {
-    if(carrinhoMovimento.length === 0) return showToast('Vazio', 'Adicione itens primeiro', 'error');
-    if(carrinhoMovimento.some(i => i.movimento <= 0)) return showToast('Erro', 'Quantidades devem ser positivas', 'error');
+    if(carrinhoMovimento.length === 0) return showToast('Atenção', 'Adicione itens primeiro', 'error');
+    if(carrinhoMovimento.some(i => i.movimento <= 0)) return showToast('Erro', 'Quantidades inválidas', 'error');
     
-    // Validação: Não deixar sair mais do que tem
     if (tipoMovimento === 'SAIDA') {
         const insuficientes = carrinhoMovimento.filter(i => i.movimento > i.quantidade);
         if (insuficientes.length > 0) {
-            return showToast('Bloqueado', `Estoque insuficiente para: ${insuficientes[0].nome}`, 'error');
+            return showToast('Bloqueado', `Saldo insuficiente: ${insuficientes[0].nome}`, 'error');
         }
     }
     
     const verbo = tipoMovimento === 'SAIDA' ? 'baixa' : 'entrada';
-    if(!confirm(`Confirmar ${verbo} de ${carrinhoMovimento.length} itens?`)) return;
+    if(!confirm(`Confirmar ${verbo}?`)) return;
 
     let erros = 0;
-    // Processa item a item
     for (const item of carrinhoMovimento) {
         try {
             if (tipoMovimento === 'SAIDA') {
-                // SAÍDA: Rota PATCH (só atualiza quantidade e registra log)
                 const res = await fetch(`${API_URL}/${item.id}/baixa`, {
                     method: 'PATCH',
                     headers: {'Content-Type': 'application/json'},
@@ -386,9 +343,8 @@ async function finalizarMovimentacao() {
                 });
                 if(!res.ok) erros++;
             } else {
-                // ENTRADA: Rota PUT (Atualiza quantidade somando E a nova validade)
+                // Na entrada, atualizamos a data se o usuário informou
                 const novaQtd = parseFloat(item.quantidade) + parseFloat(item.movimento);
-                
                 const dadosAtualizados = {
                     nome: item.nome,
                     categoria: item.categoria,
@@ -396,8 +352,7 @@ async function finalizarMovimentacao() {
                     unidade: item.unidade,
                     estoque_minimo: item.estoque_minimo,
                     preco: item.preco,
-                    // Usa a nova data definida no carrinho ou mantém a antiga
-                    data_validade: item.novaValidade || item.data_validade,
+                    data_validade: item.novaValidade || item.data_validade, // Usa a nova data do input
                     usuario: usuarioAtual
                 };
                 
@@ -412,25 +367,24 @@ async function finalizarMovimentacao() {
     }
 
     if(erros === 0) {
-        showToast('Sucesso', 'Movimentação concluída!');
+        showToast('Sucesso', 'Operação realizada');
         carrinhoMovimento = [];
         renderizarCarrinho();
-        carregarEstoque(); // Recarrega para atualizar telas
+        carregarEstoque(); 
         if(document.getElementById('dashboard').classList.contains('active')) atualizarDashboard();
     } else {
-        showToast('Atenção', `Alguns itens falharam ao processar`, 'error');
+        showToast('Erro', `Falha ao processar alguns itens`, 'error');
         carregarEstoque();
     }
 }
 
 // ==========================================
-// 6. TELA: RELATÓRIOS
+// 6. RELATÓRIOS (CORRIGIDO)
 // ==========================================
 async function carregarRelatorios() {
     const hoje = new Date();
     
-    // 1. Vencimentos
-    // Filtro IMPORTANTE: p.quantidade > 0. Se não tem estoque, não aparece no relatório de vencimento.
+    // 1. Vencimentos - CORREÇÃO: Filtra qtd > 0
     const listaVencimentos = produtosCache
         .filter(p => p.data_validade && parseFloat(p.quantidade) > 0)
         .sort((a,b) => new Date(a.data_validade) - new Date(b.data_validade));
@@ -446,7 +400,6 @@ async function carregarRelatorios() {
             val.setDate(val.getDate() + 1);
             const diff = Math.ceil((val - hoje) / 86400000);
             
-            // Mostra vencidos ou vencendo em 15 dias
             if(diff < 0) {
                 tbodyVenc.innerHTML += `<tr><td><strong>${p.nome}</strong></td><td class="text-danger">${val.toLocaleDateString()}</td><td><span class="badge badge-danger">VENCIDO</span></td></tr>`;
             } else if (diff <= 15) {
@@ -464,20 +417,23 @@ async function carregarRelatorios() {
         tbodyCrit.innerHTML = criticos.map(p => `<tr><td><strong>${p.nome}</strong></td><td>${p.quantidade} ${p.unidade}</td><td class="text-danger">${p.estoque_minimo}</td></tr>`).join('');
     }
 
-    // 3. Mais Saídos (API)
-    const res = await fetch('/api/relatorios/mais-saidos');
-    const saidos = await res.json();
-    const tbodySaidos = document.getElementById('relSaidos');
-    if(saidos.length === 0) {
-        tbodySaidos.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">Sem dados de saída.</td></tr>';
-    } else {
-        tbodySaidos.innerHTML = saidos.map(p => `<tr><td>${p.nome}</td><td><strong>${p.total_saida}</strong> ${p.unidade}</td></tr>`).join('');
-    }
+    // 3. Mais Saídos
+    try {
+        const res = await fetch('/api/relatorios/mais-saidos');
+        const saidos = await res.json();
+        const tbodySaidos = document.getElementById('relSaidos');
+        if(saidos.length === 0) {
+            tbodySaidos.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">Sem dados recentes.</td></tr>';
+        } else {
+            tbodySaidos.innerHTML = saidos.map(p => `<tr><td>${p.nome}</td><td><strong>${p.total_saida}</strong> ${p.unidade}</td></tr>`).join('');
+        }
+    } catch(e) { console.error(e); }
+    
     lucide.createIcons();
 }
 
 // ==========================================
-// 7. UTILS (CRUD, Modais, Toast)
+// 7. UTILS GERAIS
 // ==========================================
 async function atualizarDashboard() {
     if(produtosCache.length === 0) await carregarEstoque();
@@ -487,10 +443,10 @@ async function atualizarDashboard() {
     produtosCache.forEach(p => {
         total += (parseFloat(p.preco||0) * parseFloat(p.quantidade));
         if(parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo)) criticos++;
-        
+        // CORREÇÃO: Só conta vencendo se tiver estoque
         if(p.data_validade && parseFloat(p.quantidade) > 0) {
             const diff = (new Date(p.data_validade) - hoje) / 86400000;
-            if(diff <= 7) vencendo++; // Vencidos ou vencendo em 7 dias
+            if(diff <= 7) vencendo++; 
         }
     });
 
@@ -498,37 +454,41 @@ async function atualizarDashboard() {
     document.getElementById('dashItensCriticos').innerText = criticos;
     document.getElementById('dashVencendo').innerText = vencendo;
 
-    const res = await fetch('/api/movimentacoes');
-    const movs = await res.json();
-    const tbody = document.getElementById('dashUltimasAtividades');
-    if(tbody) {
-        tbody.innerHTML = movs.slice(0,5).map(m => `
-            <tr>
-                <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleDateString()}</td>
-                <td style="font-size:0.8rem; color:var(--primary)">${m.usuario || 'Sistema'}</td>
-                <td>${m.produto_nome}</td>
-                <td>${formatarTipo(m.tipo)}</td>
-                <td>${m.quantidade}</td>
-            </tr>`).join('');
-        lucide.createIcons();
-    }
+    try {
+        const res = await fetch('/api/movimentacoes');
+        const movs = await res.json();
+        const tbody = document.getElementById('dashUltimasAtividades');
+        if(tbody) {
+            tbody.innerHTML = movs.slice(0,5).map(m => `
+                <tr>
+                    <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleDateString()}</td>
+                    <td>${m.usuario || 'Sistema'}</td>
+                    <td>${m.produto_nome}</td>
+                    <td>${formatarTipo(m.tipo)}</td>
+                    <td>${m.quantidade}</td>
+                </tr>`).join('');
+            lucide.createIcons();
+        }
+    } catch(e) {}
 }
 
 async function carregarHistoricoCompleto() {
-    const res = await fetch('/api/movimentacoes');
-    const lista = await res.json();
-    const tbody = document.getElementById('tabelaHistoricoCompleta');
-    if(tbody) {
-        tbody.innerHTML = lista.map(m => `
-            <tr>
-                <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleString()}</td>
-                <td style="font-weight:500; color:var(--primary)">${m.usuario || 'Sistema'}</td>
-                <td><strong>${m.produto_nome}</strong></td>
-                <td>${formatarTipo(m.tipo)}</td>
-                <td>${m.quantidade}</td>
-            </tr>`).join('');
-        lucide.createIcons();
-    }
+    try {
+        const res = await fetch('/api/movimentacoes');
+        const lista = await res.json();
+        const tbody = document.getElementById('tabelaHistoricoCompleta');
+        if(tbody) {
+            tbody.innerHTML = lista.map(m => `
+                <tr>
+                    <td style="color:var(--text-muted)">${new Date(m.data_movimentacao).toLocaleString()}</td>
+                    <td style="font-weight:500; color:var(--primary)">${m.usuario || 'Sistema'}</td>
+                    <td><strong>${m.produto_nome}</strong></td>
+                    <td>${formatarTipo(m.tipo)}</td>
+                    <td>${m.quantidade}</td>
+                </tr>`).join('');
+            lucide.createIcons();
+        }
+    } catch(e) {}
 }
 
 function formatarTipo(t) {
@@ -542,8 +502,7 @@ function abrirModalCadastro() {
     document.getElementById('formProduto').reset();
     document.getElementById('modalTitle').innerText = "Novo Item";
     const inputQtd = document.getElementById('quantidade');
-    inputQtd.disabled = false; 
-    inputQtd.style.backgroundColor = "white";
+    inputQtd.disabled = false; inputQtd.style.backgroundColor = "white";
     document.getElementById('avisoEdicao').style.display = "none";
     document.getElementById('modalForm').style.display = 'flex';
     atualizarSelectCategoria();
@@ -561,10 +520,8 @@ function editarItem(p) {
     document.getElementById('preco').value = p.preco;
     if(p.data_validade) document.getElementById('data_validade').value = p.data_validade.split('T')[0];
 
-    // Bloqueia edição de estoque aqui
     const inputQtd = document.getElementById('quantidade');
-    inputQtd.disabled = true; 
-    inputQtd.style.backgroundColor = "#f5f5f4";
+    inputQtd.disabled = true; inputQtd.style.backgroundColor = "#f5f5f4";
     document.getElementById('avisoEdicao').style.display = "block";
     document.getElementById('modalForm').style.display = 'flex';
 }
@@ -587,33 +544,32 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
 
     try {
         await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
-        fecharModais(); 
-        await carregarEstoque();
-        // Atualiza a tela que estiver aberta
+        fecharModais(); await carregarEstoque();
         if(document.getElementById('cadastros').classList.contains('active')) renderizarTelaCadastros();
         if(document.getElementById('estoque').classList.contains('active')) renderizarTabelaEstoque(produtosCache);
-        showToast('Sucesso', 'Salvo com sucesso!');
+        showToast('Sucesso', 'Salvo!');
     } catch (e) { showToast('Erro', 'Falha ao salvar', 'error'); }
 });
 
-function atualizarSelectCategoria() {
-    const select = document.getElementById('categoria');
-    if(!select) return;
-    select.innerHTML = '<option value="">Selecione...</option>';
-    categoriasCache.forEach(c => {
-        select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
-    });
+async function deletarItem(id) {
+    if(confirm('Confirmar exclusão?')) { 
+        await fetch(`${API_URL}/${id}`, { method: 'DELETE' }); 
+        carregarEstoque().then(() => {
+            renderizarTelaCadastros();
+            showToast('Info', 'Removido');
+        });
+    }
 }
 
 function gerarListaApenasCriticos() {
     const criticos = produtosCache.filter(p => parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo));
     if(criticos.length === 0) return showToast('Info', 'Nenhum item crítico.');
-    const texto = "*LISTA DE URGÊNCIA* 🚨\n\n" + criticos.map(p => `- [ ] ${p.nome} (Atual: ${p.quantidade}, Mín: ${p.estoque_minimo})`).join('\n');
+    const texto = "LISTA DE COMPRAS (URGENTE)\n\n" + criticos.map(p => `- [ ] ${p.nome} (Atual: ${p.quantidade})`).join('\n');
     document.getElementById('textoLista').value = texto;
     document.getElementById('modalResultado').style.display = 'flex';
 }
 
-function copiarLista() { document.getElementById('textoLista').select(); document.execCommand('copy'); showToast('Copiado', 'Transferido para área de transferência'); fecharModais(); }
+function copiarLista() { document.getElementById('textoLista').select(); document.execCommand('copy'); showToast('Sucesso', 'Copiado!'); fecharModais(); }
 function fecharModais() { document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none'); }
 function showToast(title, msg, type='success') {
     const container = document.getElementById('toast-container');
