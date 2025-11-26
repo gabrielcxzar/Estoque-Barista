@@ -10,119 +10,176 @@
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    <nav class="sidebar">
-        <div class="logo"><i data-lucide="coffee"></i> Barista Pro</div>
-        
-        <div class="nav-label">Geral</div>
-        <button class="menu-btn active" onclick="showScreen('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
-        <button class="menu-btn" onclick="showScreen('cadastros')"><i data-lucide="package"></i> Cadastros</button>
-        
-        <div class="nav-label">Operação</div>
-        <button class="menu-btn" onclick="showScreen('movimentacao')"><i data-lucide="arrow-left-right"></i> Movimentação</button>
-        
-        <div class="nav-label">Análise</div>
-        <button class="menu-btn" onclick="showScreen('relatorios')"><i data-lucide="bar-chart-2"></i> Relatórios</button>
-    </nav>
-
-    <!-- MAIN -->
-    <main class="main-content">
-        
-        <!-- DASHBOARD -->
-        <section id="dashboard" class="screen active">
-            <header>
-                <div><h1>Dashboard</h1><div class="subtitle">Resumo do dia.</div></div>
-                <div id="dataAtual" style="color: var(--text-muted); font-size: 0.9rem;"></div>
-            </header>
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-label">Valor em Estoque</div><div class="stat-value" id="dashValorTotal">R$ 0,00</div></div>
-                <div class="stat-card"><div class="stat-label">Itens Críticos</div><div class="stat-value" id="dashItensCriticos">0</div></div>
-                <div class="stat-card"><div class="stat-label">Vencendo (7 dias)</div><div class="stat-value" id="dashVencendo">0</div></div>
+    <!-- TELA DE LOGIN -->
+    <section id="login-screen" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <i data-lucide="coffee" size="48" class="text-primary"></i>
+                <h1>Barista Pro</h1>
+                <p>Entre para gerenciar o sistema</p>
             </div>
-            <h3 style="margin-bottom: 16px;">Atividades Recentes</h3>
-            <div class="table-container">
-                <table><thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead><tbody id="dashUltimasAtividades"></tbody></table>
-            </div>
-        </section>
-
-        <!-- CADASTROS (Produtos e Categorias) -->
-        <section id="cadastros" class="screen">
-            <header>
-                <div><h1>Cadastros</h1><div class="subtitle">Gerencie produtos e categorias.</div></div>
-                <button class="btn btn-primary" onclick="abrirModalCadastro()"><i data-lucide="plus"></i> Novo Item</button>
-            </header>
-            <div class="grid-cadastros">
-                <!-- Coluna Esquerda: Categorias -->
-                <div class="stat-card" style="height: fit-content;">
-                    <h3 style="margin-bottom: 15px;">Categorias</h3>
-                    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                        <input id="novaCategoria" placeholder="Nova Categoria..." style="flex:1">
-                        <button class="btn btn-secondary" onclick="adicionarCategoria()"><i data-lucide="plus"></i></button>
-                    </div>
-                    <ul id="listaCategorias" class="cat-list"></ul>
+            <form id="loginForm" onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="loginUser" placeholder="Ex: admin" required>
                 </div>
-                <!-- Coluna Direita: Lista de Produtos -->
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="loginPass" placeholder="••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Entrar</button>
+                <p id="loginError" class="error-msg"></p>
+            </form>
+        </div>
+    </section>
+
+    <!-- APLICAÇÃO PRINCIPAL (Inicialmente oculta) -->
+    <div id="app-container" style="display: none;">
+        
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="logo"><i data-lucide="coffee"></i> Barista Pro</div>
+            
+            <div class="nav-label">Geral</div>
+            <button class="menu-btn active" onclick="showScreen('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+            <button class="menu-btn" onclick="showScreen('cadastros')"><i data-lucide="package"></i> Cadastros</button>
+            
+            <div class="nav-label">Operação</div>
+            <button class="menu-btn" onclick="showScreen('movimentacao')"><i data-lucide="arrow-left-right"></i> Movimentação</button>
+            
+            <div class="nav-label">Análise</div>
+            <button class="menu-btn" onclick="showScreen('relatorios')"><i data-lucide="bar-chart-2"></i> Relatórios</button>
+
+            <div style="flex: 1;"></div>
+            <div class="user-info">
+                <div class="avatar"><i data-lucide="user"></i></div>
+                <div>
+                    <strong id="displayUser">Usuário</strong>
+                    <small onclick="fazerLogout()" style="cursor: pointer; color: var(--primary);">Sair</small>
+                </div>
+            </div>
+        </nav>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            
+            <!-- DASHBOARD -->
+            <section id="dashboard" class="screen active">
+                <header>
+                    <div><h1>Dashboard</h1><div class="subtitle">Resumo do dia.</div></div>
+                    <div id="dataAtual" style="color: var(--text-muted); font-size: 0.9rem;"></div>
+                </header>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-label">Valor em Estoque</div><div class="stat-value" id="dashValorTotal">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="stat-label">Itens Críticos</div><div class="stat-value" id="dashItensCriticos">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Vencendo (7 dias)</div><div class="stat-value" id="dashVencendo">0</div></div>
+                </div>
+                <h3 style="margin-bottom: 16px;">Atividades Recentes</h3>
                 <div class="table-container">
-                    <table>
-                        <thead><tr><th>Produto</th><th>Categoria</th><th style="text-align:right">Ações</th></tr></thead>
-                        <tbody id="tabelaCadastros"></tbody>
-                    </table>
+                    <table><thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th></tr></thead><tbody id="dashUltimasAtividades"></tbody></table>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- MOVIMENTAÇÃO (PDV) -->
-        <section id="movimentacao" class="screen">
-            <header><div><h1>Movimentação</h1><div class="subtitle">Entrada e Saída de Estoque.</div></div></header>
-            <div class="mode-toggle">
-                <button class="mode-btn active-saida" id="btnModoSaida" onclick="setModo('SAIDA')">SAÍDA</button>
-                <button class="mode-btn" id="btnModoEntrada" onclick="setModo('ENTRADA')">ENTRADA</button>
-            </div>
-            <div class="pos-layout">
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <div class="search-wrapper">
-                        <i data-lucide="search"></i>
-                        <input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item..." onkeyup="renderizarTelaMovimento(this.value)">
+            <!-- CADASTROS (Produtos e Categorias) -->
+            <section id="cadastros" class="screen">
+                <header>
+                    <div><h1>Cadastros</h1><div class="subtitle">Gerencie produtos e categorias.</div></div>
+                    <button class="btn btn-primary" onclick="abrirModalCadastro()"><i data-lucide="plus"></i> Novo Item</button>
+                </header>
+                <div class="grid-cadastros">
+                    <!-- Coluna Esquerda: Categorias -->
+                    <div class="stat-card" style="height: fit-content;">
+                        <h3 style="margin-bottom: 15px;">Categorias</h3>
+                        <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                            <input id="novaCategoria" placeholder="Nova Categoria..." style="flex:1">
+                            <button class="btn btn-secondary" onclick="adicionarCategoria()"><i data-lucide="plus"></i></button>
+                        </div>
+                        <ul id="listaCategorias" class="cat-list"></ul>
                     </div>
-                    <div id="listaProdutosMovimento" class="pos-products"></div>
+                    <!-- Coluna Direita: Lista de Produtos -->
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Produto</th><th>Categoria</th><th style="text-align:right">Ações</th></tr></thead>
+                            <tbody id="tabelaCadastros"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="pos-cart">
-                    <div class="cart-header"><h3 id="tituloCarrinho">Itens para Saída</h3></div>
-                    <div class="cart-items" id="carrinhoLista"></div>
-                    <div class="cart-footer"><button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">Confirmar</button></div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- RELATÓRIOS -->
-        <section id="relatorios" class="screen">
-            <header><h1>Relatórios</h1></header>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3 style="color:var(--danger-text)">🚨 Vencidos / Perto</h3>
-                    <table style="margin-top:10px; font-size:0.9rem">
-                        <thead><tr><th>Item</th><th>Data</th><th>Qtd</th></tr></thead>
-                        <tbody id="relVencimentos"></tbody>
-                    </table>
+            <!-- MOVIMENTAÇÃO (PDV) -->
+            <section id="movimentacao" class="screen">
+                <header><div><h1>Movimentação</h1><div class="subtitle">Entrada e Saída de Estoque.</div></div></header>
+                <div class="mode-toggle">
+                    <button class="mode-btn active-saida" id="btnModoSaida" onclick="setModo('SAIDA')">SAÍDA</button>
+                    <button class="mode-btn" id="btnModoEntrada" onclick="setModo('ENTRADA')">ENTRADA</button>
                 </div>
-                <div class="stat-card">
-                    <h3 style="color:var(--warning-text)">⚠️ Estoque Crítico</h3>
-                    <table style="margin-top:10px; font-size:0.9rem">
-                        <thead><tr><th>Item</th><th>Atual</th><th>Ref</th></tr></thead>
-                        <tbody id="relCriticos"></tbody>
-                    </table>
+                <div class="pos-layout">
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div class="search-wrapper">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="buscaMovimento" class="search-input" placeholder="Buscar item..." onkeyup="renderizarTelaMovimento(this.value)">
+                        </div>
+                        <div id="listaProdutosMovimento" class="pos-products"></div>
+                    </div>
+                    <div class="pos-cart">
+                        <div class="cart-header"><h3 id="tituloCarrinho">Itens para Saída</h3></div>
+                        <div class="cart-items" id="carrinhoLista"></div>
+                        <div class="cart-footer"><button class="btn btn-primary" id="btnFinalizarMovimento" style="width: 100%;" onclick="finalizarMovimentacao()">Confirmar</button></div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3 style="color:var(--text-main)">🔥 Mais Saídos (Top 10)</h3>
-                    <table style="margin-top:10px; font-size:0.9rem">
-                        <thead><tr><th>Item</th><th>Total Saída</th></tr></thead>
-                        <tbody id="relSaidos"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+            </section>
 
-    </main>
+            <!-- RELATÓRIOS -->
+            <section id="relatorios" class="screen">
+                <header><h1>Relatórios</h1></header>
+                <div class="stats-grid-reports">
+                    
+                    <!-- Card de Validade -->
+                    <div class="stat-card report-card">
+                        <div class="report-header">
+                            <h3 class="text-danger"><i data-lucide="calendar-off" size="18"></i> Controle de Validade</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table style="margin-top:10px; font-size:0.9rem">
+                                <thead><tr><th>Item</th><th>Vencimento</th><th>Status</th></tr></thead>
+                                <tbody id="relVencimentos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Card de Críticos -->
+                    <div class="stat-card report-card">
+                        <div class="report-header">
+                            <h3 class="text-warning"><i data-lucide="alert-triangle" size="18"></i> Estoque Crítico</h3>
+                            <button class="btn btn-ghost btn-sm" title="Gerar Lista de Compras" onclick="gerarListaApenasCriticos()">
+                                <i data-lucide="shopping-cart" size="16"></i> Gerar Lista
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table style="margin-top:10px; font-size:0.9rem">
+                                <thead><tr><th>Item</th><th>Atual</th><th>Mínimo</th></tr></thead>
+                                <tbody id="relCriticos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Card de Mais Saídos -->
+                    <div class="stat-card report-card">
+                        <div class="report-header">
+                            <h3 class="text-primary"><i data-lucide="trending-up" size="18"></i> Top Saídas</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table style="margin-top:10px; font-size:0.9rem">
+                                <thead><tr><th>Item</th><th>Total Saída</th></tr></thead>
+                                <tbody id="relSaidos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
     
     <div id="toast-container"></div>
 
@@ -153,6 +210,18 @@
                     <button type="submit" class="btn btn-primary" style="flex:1">Salvar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL TEXTO FINAL -->
+    <div id="modalResultado" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Lista de Compras</h2>
+            <textarea id="textoLista" style="width: 100%; height: 150px; margin: 15px 0; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: monospace;"></textarea>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" style="flex:1" onclick="fecharModais()">Fechar</button>
+                <button class="btn btn-primary" style="flex:1" onclick="copiarLista()">Copiar</button>
+            </div>
         </div>
     </div>
 

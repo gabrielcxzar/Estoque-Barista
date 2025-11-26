@@ -4,16 +4,52 @@ let categoriasCache = [];
 let carrinhoMovimento = [];
 let editando = false;
 let tipoMovimento = 'SAIDA';
+let usuarioAtual = null;
+
+// --- USUÁRIOS (SIMPLIFICADO) ---
+const users = {
+    'admin': 'admin',
+    'barista': 'cafe'
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     const dataEl = document.getElementById('dataAtual');
     if (dataEl) dataEl.innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     
-    carregarEstoque();
-    carregarCategorias();
-    atualizarDashboard();
+    // Verifica se já tem login (opcional, para manter sessão simples)
+    // Por segurança, forçamos login no refresh
 });
+
+// --- LOGIN SYSTEM ---
+function fazerLogin(e) {
+    e.preventDefault();
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
+    const errorMsg = document.getElementById('loginError');
+
+    if (users[user] && users[user] === pass) {
+        usuarioAtual = user;
+        document.getElementById('displayUser').innerText = user.charAt(0).toUpperCase() + user.slice(1);
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        
+        // Inicia dados
+        carregarEstoque();
+        carregarCategorias();
+        atualizarDashboard();
+    } else {
+        errorMsg.innerText = 'Usuário ou senha incorretos';
+    }
+}
+
+function fazerLogout() {
+    usuarioAtual = null;
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('loginForm').reset();
+    document.getElementById('loginError').innerText = '';
+}
 
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -22,7 +58,6 @@ function showScreen(screenId) {
     const screen = document.getElementById(screenId);
     if(screen) screen.classList.add('active');
 
-    // Highlight menu
     const menuMap = {'dashboard':0, 'cadastros':1, 'movimentacao':2, 'relatorios':3};
     if(menuMap[screenId] !== undefined) document.querySelectorAll('.menu-btn')[menuMap[screenId]].classList.add('active');
 
@@ -55,7 +90,6 @@ function atualizarSelectCategoria() {
 
 // --- CADASTROS (NOVA ABA) ---
 function renderizarTelaCadastros() {
-    // Renderiza lista de produtos
     const tbody = document.getElementById('tabelaCadastros');
     tbody.innerHTML = '';
     
@@ -72,7 +106,6 @@ function renderizarTelaCadastros() {
         `;
     });
 
-    // Renderiza lista de categorias
     const listaCat = document.getElementById('listaCategorias');
     listaCat.innerHTML = '';
     categoriasCache.forEach(c => {
@@ -109,7 +142,7 @@ async function deletarCategoria(id) {
     renderizarTelaCadastros();
 }
 
-// --- DASHBOARD & RELATÓRIOS ---
+// --- DASHBOARD & RELATÓRIOS (MODIFICADO) ---
 async function atualizarDashboard() {
     if(produtosCache.length === 0) await carregarEstoque();
     let total = 0, criticos = 0, vencendo = 0;
@@ -128,7 +161,6 @@ async function atualizarDashboard() {
     document.getElementById('dashItensCriticos').innerText = criticos;
     document.getElementById('dashVencendo').innerText = vencendo;
 
-    // Atividades recentes
     const res = await fetch('/api/movimentacoes');
     const movs = await res.json();
     const tbody = document.getElementById('dashUltimasAtividades');
@@ -142,31 +174,59 @@ async function atualizarDashboard() {
     lucide.createIcons();
 }
 
+// --- NOVA LÓGICA DE RELATÓRIOS ---
 async function carregarRelatorios() {
     const hoje = new Date();
     
-    // 1. Vencidos/Perto
-    const vencidos = produtosCache.filter(p => {
-        if(!p.data_validade) return false;
-        const diff = (new Date(p.data_validade) - hoje) / 86400000;
-        return diff <= 15; // 15 dias de margem
+    // 1. Vencimentos (Separado por status)
+    const listaVencimentos = produtosCache.filter(p => p.data_validade).sort((a,b) => new Date(a.data_validade) - new Date(b.data_validade));
+    const tbodyVenc = document.getElementById('relVencimentos');
+    tbodyVenc.innerHTML = '';
+
+    listaVencimentos.forEach(p => {
+        const val = new Date(p.data_validade);
+        val.setDate(val.getDate() + 1); // Fuso
+        const diff = Math.ceil((val - hoje) / 86400000);
+        
+        // Lógica de exibição
+        if(diff < 0) {
+            tbodyVenc.innerHTML += `<tr>
+                <td><strong>${p.nome}</strong></td>
+                <td class="text-danger">${val.toLocaleDateString()}</td>
+                <td><span class="badge badge-danger">VENCIDO</span></td>
+            </tr>`;
+        } else if (diff <= 15) {
+            tbodyVenc.innerHTML += `<tr>
+                <td>${p.nome}</td>
+                <td class="text-warning">${val.toLocaleDateString()}</td>
+                <td><span class="badge badge-warning">Vence em ${diff} dias</span></td>
+            </tr>`;
+        }
     });
-    document.getElementById('relVencimentos').innerHTML = vencidos.map(p => `
-        <tr><td>${p.nome}</td><td>${new Date(p.data_validade).toLocaleDateString()}</td><td>${p.quantidade}</td></tr>
-    `).join('');
 
     // 2. Críticos
     const criticos = produtosCache.filter(p => p.quantidade <= p.estoque_minimo);
     document.getElementById('relCriticos').innerHTML = criticos.map(p => `
-        <tr><td>${p.nome}</td><td>${p.quantidade} ${p.unidade}</td><td>Mín: ${p.estoque_minimo}</td></tr>
+        <tr><td><strong>${p.nome}</strong></td><td>${p.quantidade} ${p.unidade}</td><td class="text-danger">${p.estoque_minimo}</td></tr>
     `).join('');
 
-    // 3. Mais Saídos (API)
+    // 3. Mais Saídos
     const res = await fetch('/api/relatorios/mais-saidos');
     const saidos = await res.json();
     document.getElementById('relSaidos').innerHTML = saidos.map(p => `
-        <tr><td>${p.nome}</td><td>${p.total_saida} ${p.unidade}</td></tr>
+        <tr><td>${p.nome}</td><td><strong>${p.total_saida}</strong> ${p.unidade}</td></tr>
     `).join('');
+    
+    lucide.createIcons();
+}
+
+function gerarListaApenasCriticos() {
+    const criticos = produtosCache.filter(p => p.quantidade <= p.estoque_minimo);
+    if(criticos.length === 0) return showToast('Info', 'Nenhum item crítico.');
+    
+    const texto = "*LISTA DE URGÊNCIA* 🚨\n\n" + criticos.map(p => `- [ ] ${p.nome} (Atual: ${p.quantidade}, Mín: ${p.estoque_minimo})`).join('\n');
+    document.getElementById('textoLista').value = texto;
+    document.getElementById('modalResultado').style.display = 'flex';
 }
 
 function formatarTipo(t) {
@@ -183,7 +243,7 @@ function setModo(modo) {
     document.getElementById('tituloCarrinho').innerText = modo === 'SAIDA' ? 'Itens para Saída' : 'Itens para Entrada';
     const btn = document.getElementById('btnFinalizarMovimento');
     btn.innerText = modo === 'SAIDA' ? 'Confirmar Saída' : 'Confirmar Entrada';
-    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success';
+    btn.className = modo === 'SAIDA' ? 'btn btn-primary' : 'btn btn-success'; // Use success class logic in CSS if wanted, defaulting to primary color logic for simplicity or update CSS
     carrinhoMovimento = [];
     renderizarCarrinho();
 }
@@ -306,7 +366,7 @@ function editarItem(p) {
     document.getElementById('modalTitle').innerText = "Editar Item";
     document.getElementById('id_produto').value = p.id;
     document.getElementById('nome').value = p.nome;
-    document.getElementById('categoria').value = p.categoria; // Select já deve ter opções carregadas
+    document.getElementById('categoria').value = p.categoria;
     document.getElementById('quantidade').value = p.quantidade;
     document.getElementById('unidade').value = p.unidade;
     document.getElementById('estoque_minimo').value = p.estoque_minimo;
@@ -346,6 +406,13 @@ async function deletarItem(id) {
         await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
         carregarEstoque(); renderizarTelaCadastros(); showToast('Deletado', 'Item removido');
     }
+}
+
+function copiarLista() {
+    document.getElementById('textoLista').select();
+    document.execCommand('copy');
+    showToast('Copiado', 'Lista na área de transferência');
+    fecharModais();
 }
 
 function fecharModais() { document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none'); }
