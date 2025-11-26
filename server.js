@@ -66,7 +66,35 @@ app.put('/api/produtos/:id', async (req, res) => {
     }
 });
 
-// 4. DELETAR (DELETE)
+// 4. REGISTRAR BAIXA (PATCH) - NOVA ROTA
+// Recebe apenas a quantidade que saiu e desconta do estoque
+app.patch('/api/produtos/:id/baixa', async (req, res) => {
+    const { id } = req.params;
+    const { quantidade_saida } = req.body;
+
+    try {
+        if (!quantidade_saida || isNaN(quantidade_saida)) {
+            return res.status(400).json({ error: "Quantidade inválida" });
+        }
+
+        // Subtrai do banco diretamente
+        const result = await pool.query(
+            'UPDATE produtos SET quantidade = quantidade - $1 WHERE id = $2 RETURNING *',
+            [quantidade_saida, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Produto não encontrado" });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 5. DELETAR (DELETE)
 app.delete('/api/produtos/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -79,7 +107,6 @@ app.delete('/api/produtos/:id', async (req, res) => {
 });
 
 // --- ROTA FALLBACK (IMPORTANTE) ---
-// Qualquer rota que não seja API vai devolver o HTML (necessário para Single Page Apps)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -89,5 +116,4 @@ app.listen(port, () => {
     console.log(`☕ Servidor rodando na porta ${port}`);
 });
 
-// Exportar para a Vercel (Boas práticas)
 module.exports = app;
