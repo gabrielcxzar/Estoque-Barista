@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barista Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #F8F4F0; --bg-card: #FFFFFF;
+            --text-dark: #3E2723; --text-muted: #795548;
+            --primary: #6F4E37; --primary-hover: #5D4037;
+            --accent: #D7CCC8; --danger: #C62828; --warning: #F57C00; --success: #388E3C;
+            --shadow: 0 4px 20px rgba(62, 39, 35, 0.08); --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-dark); padding: 40px 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* Header e Botões */
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .app-header h1 { font-weight: 700; font-size: 2rem; color: var(--primary); }
+        
+        .btn-shopping { background: var(--text-dark); color: white; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-shopping:hover { background: #5D4037; transform: translateY(-2px); }
+
+        /* Cards e Form */
+        .card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 25px; margin-bottom: 30px; border: 1px solid var(--accent); }
+        .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--text-dark); border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 150px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); }
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--accent); border-radius: 6px; background: #FAFAFA; }
+        
+        .btn-main { width: 100%; padding: 14px; border: none; border-radius: 6px; background: var(--primary); color: white; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        .btn-cancel { background: white; color: var(--text-muted); border: 1px solid var(--accent); }
+
+        /* Tabela */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th { text-align: left; padding: 12px 20px; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid var(--accent); }
+        td { padding: 15px 20px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.95rem; }
+        
+        .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; display: inline-block; margin-top: 4px; }
+        .status-warning { background: #FFF3E0; color: var(--warning); }
+        .status-danger { background: #FFEBEE; color: var(--danger); }
+        .row-expired { background-color: rgba(198, 40, 40, 0.03); }
+
+        /* --- MODAIS --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        
+        /* Modal de Escolha */
+        .choice-btn { width: 100%; padding: 20px; margin-bottom: 15px; border: 2px solid var(--accent); border-radius: 8px; background: white; cursor: pointer; text-align: left; transition: 0.2s; }
+        .choice-btn:hover { border-color: var(--primary); background: #FAF8F6; }
+        .choice-btn h3 { color: var(--primary); margin-bottom: 5px; }
+        .choice-btn p { color: #666; font-size: 0.9rem; margin: 0; }
+
+        /* Modal Manual (Checklist) */
+        .checklist-container { max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; margin: 15px 0; padding: 10px; }
+        .checklist-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #f5f5f5; }
+        .checklist-item input { width: auto; margin-right: 15px; transform: scale(1.3); }
+        .checklist-item:last-child { border-bottom: none; }
+
+        textarea { width: 100%; height: 200px; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; }
+        .actions button { background: none; border: none; cursor: pointer; font-size: 1.1rem; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header class="app-header">
+        <h1>☕ Barista Pro</h1>
+        <button class="btn-shopping" onclick="abrirOpcoesLista()">
+            🛒 Gerar Lista de Compras
+        </button>
+    </header>
+    
+    <div class="card">
+        <h2 class="card-title" id="formTitle">Novo Item</h2>
+        <form id="formProduto">
+            <input type="hidden" id="id_produto">
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label>Nome do Produto</label>
+                    <input id="nome" placeholder="Ex: Leite Integral" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <input id="categoria" placeholder="Ex: Laticínios">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                 <div class="form-group">
+                    <label>Qtd Atual</label>
+                    <input type="number" id="quantidade" step="0.01" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Unidade</label>
+                    <select id="unidade">
+                        <option value="un">un</option>
+                        <option value="L">L</option>
+                        <option value="ml">ml</option>
+                        <option value="kg">kg</option>
+                        <option value="g">g</option>
+                        <option value="pct">pct</option>
+                        <option value="cx">cx</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Mínimo (Alerta)</label>
+                    <input type="number" id="estoque_minimo" step="0.01" placeholder="Ex: 5" required>
+                </div>
+                <div class="form-group">
+                    <label>Validade</label>
+                    <input type="date" id="data_validade">
+                </div>
+                <div class="form-group">
+                    <label>Custo Unit. (R$)</label>
+                    <input type="number" id="preco" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+            
+            <button type="submit" id="btnSalvar" class="btn-main">SALVAR ITEM</button>
+            <button type="button" id="btnCancelar" class="btn-main btn-cancel" style="display: none;" onclick="cancelarEdicao()">CANCELAR</button>
+        </form>
+    </div>
+
+    <div class="card" style="padding: 0;">
+        <div style="padding: 20px; border-bottom: 1px solid #eee;">
+            <input type="text" id="inputBusca" placeholder="🔍 Buscar no estoque..." onkeyup="filtrarTabela()" style="border-radius: 20px; padding-left: 20px;">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Estoque / Mínimo</th>
+                        <th>Validade</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalEscolha" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color: var(--primary); margin-bottom: 20px;">Gerar Lista de Compras</h2>
+        
+        <button class="choice-btn" onclick="gerarAutomatico()">
+            <h3>⚡ Reposição Automática</h3>
+            <p>Apenas itens com estoque baixo.</p>
+        </button>
+
+        <button class="choice-btn" onclick="abrirSelecaoManual()">
+            <h3>📝 Seleção Manual</h3>
+            <p>Escolha item por item (ideal para promoções).</p>
+        </button>
+
+        <button class="btn-main btn-cancel" onclick="fecharModais()">Cancelar</button>
+    </div>
+</div>
+
+<div id="modalManual" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color: var(--primary);">Selecione os Itens</h2>
+        <p style="font-size: 0.9rem; color: #666;">Marque o que deseja comprar:</p>
+        
+        <div class="checklist-container" id="containerChecklist">
+            </div>
+
+        <button class="btn-main" onclick="gerarTextoManual()">Gerar Texto</button>
+        <button class="btn-main btn-cancel" onclick="fecharModais()">Cancelar</button>
+    </div>
+</div>
+
+<div id="modalResultado" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color: var(--primary);">🛒 Copiar e Enviar</h2>
+        <textarea id="textoFinal"></textarea>
+        <button class="btn-main" onclick="copiarLista()">Copiar para WhatsApp</button>
+        <button class="btn-main btn-cancel" onclick="fecharModais()">Fechar</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/produtos';
+    let todosProdutos = [];
+    let editando = false;
+
+    // --- INICIALIZAÇÃO E CRUD ---
+    document.addEventListener('DOMContentLoaded', carregarItens);
+
+    async function carregarItens() {
+        try {
+            const res = await fetch(API_URL);
+            todosProdutos = await res.json();
+            renderizarTabela(todosProdutos);
+        } catch (error) { console.error("Erro", error); }
+    }
+
+    // Renderiza a tabela principal
+    function renderizarTabela(lista) {
+        const tbody = document.getElementById('tabelaCorpo');
+        tbody.innerHTML = '';
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        lista.forEach(p => {
+            let validadeHtml = '<span style="color: #999;">-</span>';
+            let rowClass = '';
+            
+            if (p.data_validade) {
+                const validade = new Date(p.data_validade);
+                validade.setDate(validade.getDate() + 1);
+                const diasParaVencer = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+                const dataFormatada = validade.toLocaleDateString('pt-BR');
+
+                if (diasParaVencer < 0) {
+                    validadeHtml = `<span class="status-badge status-danger">VENCEU (${dataFormatada})</span>`;
+                    rowClass = 'row-expired';
+                } else if (diasParaVencer <= 10) {
+                    validadeHtml = `<span class="status-badge status-warning">Vence dia ${dataFormatada}</span>`;
+                } else {
+                    validadeHtml = `<span style="color: green;">${dataFormatada}</span>`;
+                }
+            }
+
+            const estoqueBaixo = parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo);
+            const estoqueHtml = estoqueBaixo 
+                ? `<span style="color: #D32F2F; font-weight: bold;">${p.quantidade} ${p.unidade}</span> <span style="font-size: 0.8rem; color: #999;">(Mín: ${p.estoque_minimo})</span> ⚠️`
+                : `<span>${p.quantidade} ${p.unidade}</span>`;
+
+            const tr = document.createElement('tr');
+            tr.className = rowClass;
+            tr.innerHTML = `
+                <td>
+                    <div style="font-weight: 700;">${p.nome}</div>
+                    <div style="font-size: 0.8rem; color: #795548;">${p.categoria || ''}</div>
+                </td>
+                <td>${estoqueHtml}</td>
+                <td>${validadeHtml}</td>
+                <td style="text-align: right;">
+                    <div class="actions">
+                        <button onclick='prepararEdicao(${JSON.stringify(p)})'>✏️</button>
+                        <button onclick="deletarItem(${p.id})" style="color: #C62828;">🗑️</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- NOVA LÓGICA DE LISTAS DE COMPRA ---
+
+    function abrirOpcoesLista() {
+        document.getElementById('modalEscolha').style.display = 'flex';
+    }
+
+    function fecharModais() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    // Opção 1: Automático
+    function gerarAutomatico() {
+        const diasMargem = 5;
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        const paraComprar = todosProdutos.filter(p => {
+            const estoqueBaixo = parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo);
+            let vaiVencer = false;
+            if (p.data_validade) {
+                const validade = new Date(p.data_validade);
+                validade.setDate(validade.getDate() + 1);
+                const diffDias = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+                if (diffDias <= diasMargem) vaiVencer = true;
+            }
+            return estoqueBaixo || vaiVencer;
+        });
+
+        if (paraComprar.length === 0) {
+            alert("Estoque saudável! Nada crítico para comprar.");
+            return;
+        }
+
+        mostrarResultado(paraComprar, "REPOSIÇÃO AUTOMÁTICA");
+    }
+
+    // Opção 2: Manual (Passo A: Mostrar Checklist)
+    function abrirSelecaoManual() {
+        fecharModais();
+        const container = document.getElementById('containerChecklist');
+        container.innerHTML = '';
+
+        // Ordenar alfabeticamente para facilitar a busca manual
+        const listaOrdenada = [...todosProdutos].sort((a, b) => a.nome.localeCompare(b.nome));
+
+        listaOrdenada.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'checklist-item';
+            div.innerHTML = `
+                <input type="checkbox" id="check_${p.id}" value="${p.id}">
+                <label for="check_${p.id}" style="cursor: pointer; width: 100%;">
+                    <strong>${p.nome}</strong> 
+                    <span style="font-size: 0.8rem; color: #888;">(Atual: ${p.quantidade} ${p.unidade})</span>
+                </label>
+            `;
+            container.appendChild(div);
+        });
+
+        document.getElementById('modalManual').style.display = 'flex';
+    }
+
+    // Opção 2: Manual (Passo B: Gerar Texto)
+    function gerarTextoManual() {
+        const selecionados = [];
+        const checkboxes = document.querySelectorAll('#containerChecklist input[type="checkbox"]:checked');
+
+        checkboxes.forEach(chk => {
+            const produto = todosProdutos.find(p => p.id == chk.value);
+            if (produto) selecionados.push(produto);
+        });
+
+        if (selecionados.length === 0) {
+            alert("Selecione pelo menos um item.");
+            return;
+        }
+
+        fecharModais();
+        mostrarResultado(selecionados, "LISTA MANUAL");
+    }
+
+    // Função Compartilhada para Mostrar o Texto Final
+    function mostrarResultado(listaProdutos, titulo) {
+        const hoje = new Date();
+        let texto = `*LISTA DE COMPRAS - BARISTA* ☕\n`;
+        texto += `_Modo: ${titulo} - ${hoje.toLocaleDateString()}_\n\n`;
+
+        listaProdutos.forEach(p => {
+            // Tenta calcular o motivo ou sugestão de compra
+            let info = "";
+            const estoqueBaixo = parseFloat(p.quantidade) <= parseFloat(p.estoque_minimo);
+            
+            if (estoqueBaixo) {
+                const falta = (parseFloat(p.estoque_minimo) - parseFloat(p.quantidade)).toFixed(2);
+                info = ` (Faltam +${falta})`;
+            } else {
+                info = ` (Atual: ${p.quantidade})`; // Mostra quanto tem pra ela decidir quanto comprar
+            }
+
+            texto += `- [ ] ${p.nome}: ... ${p.unidade} ${info}\n`;
+        });
+
+        document.getElementById('textoFinal').value = texto;
+        document.getElementById('modalResultado').style.display = 'flex';
+    }
+
+    function copiarLista() {
+        const texto = document.getElementById('textoFinal');
+        texto.select();
+        document.execCommand('copy');
+        alert("Lista copiada!");
+    }
+
+    // --- FILTRO E CRUD ---
+    function filtrarTabela() {
+        const termo = document.getElementById('inputBusca').value.toLowerCase();
+        const filtrados = todosProdutos.filter(p => p.nome.toLowerCase().includes(termo));
+        renderizarTabela(filtrados);
+    }
+
+    document.getElementById('formProduto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = {
+            nome: document.getElementById('nome').value,
+            categoria: document.getElementById('categoria').value,
+            quantidade: document.getElementById('quantidade').value,
+            unidade: document.getElementById('unidade').value,
+            estoque_minimo: document.getElementById('estoque_minimo').value,
+            data_validade: document.getElementById('data_validade').value,
+            preco: document.getElementById('preco').value
+        };
+
+        const id = document.getElementById('id_produto').value;
+        const method = editando ? 'PUT' : 'POST';
+        const url = editando ? `${API_URL}/${id}` : API_URL;
+
+        await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+
+        cancelarEdicao();
+        carregarItens();
+    });
+
+    function prepararEdicao(p) {
+        editando = true;
+        document.getElementById('formTitle').innerText = "Editar Item";
+        document.getElementById('id_produto').value = p.id;
+        document.getElementById('nome').value = p.nome;
+        document.getElementById('categoria').value = p.categoria;
+        document.getElementById('quantidade').value = p.quantidade;
+        document.getElementById('unidade').value = p.unidade;
+        document.getElementById('estoque_minimo').value = p.estoque_minimo;
+        document.getElementById('preco').value = p.preco;
+        
+        if(p.data_validade) {
+             document.getElementById('data_validade').value = p.data_validade.split('T')[0];
+        } else {
+             document.getElementById('data_validade').value = '';
+        }
+
+        const btn = document.getElementById('btnSalvar');
+        btn.innerText = "ATUALIZAR";
+        btn.style.background = "#F57C00";
+        document.getElementById('btnCancelar').style.display = "block";
+        window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function cancelarEdicao() {
+        editando = false;
+        document.getElementById('formProduto').reset();
+        document.getElementById('id_produto').value = '';
+        document.getElementById('formTitle').innerText = "Novo Item";
+        document.getElementById('btnSalvar').innerText = "SALVAR ITEM";
+        document.getElementById('btnSalvar').style.background = "#6F4E37";
+        document.getElementById('btnCancelar').style.display = "none";
+    }
+
+    async function deletarItem(id) {
+        if(confirm('Excluir item?')) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            carregarItens();
+        }
+    }
+</script>
+
+</body>
+</html>
